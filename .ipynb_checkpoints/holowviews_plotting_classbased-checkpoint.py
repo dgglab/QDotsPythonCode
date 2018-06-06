@@ -128,9 +128,10 @@ class Overview():
         self.thread_count += 1
         img = self.plot_thread.start()
             #plot_thread.start()
-        time.sleep(.1)
+        #time.sleep(1)
         print(self.plot_thread.isAlive())
             #plot_thread.join()
+        img = self.q.get()
         return img
 
     def get_plot(self):
@@ -190,7 +191,10 @@ class PlottingThread_inline (threading.Thread):
             print('here2')
             #print(point_dict)
             time.sleep(.1)
-            hv.ipython.display(dmap_in)
+            
+            self.qu.put(dmap_in)
+            #hv.ipython.display(dmap_in)
+            
             print('here2.5')
             if self.last_thread:
                 print(self.last_thread)
@@ -202,8 +206,9 @@ class PlottingThread_inline (threading.Thread):
                         img = list(dmap_in.data.items())[0][1] #This gets the hv.Image object from a Dynamic Map
                         return img
                     if self.get_plot:
-                        img = list(dmap_in.data.items())[0][1]
-                        self.qu.put(img)
+                        #img = list(dmap_in.data.items())[0][1]
+                        #self.qu.put(img)
+                        self.qu.put(dmap_in)
                         self.get_plot = False
                     time.sleep(.1)
                     #points['z'][i,j] =points['x'][i]**2+points['y'][j]**2
