@@ -10,6 +10,7 @@ import queue as Queue
 
 
 class GUI(threading.Thread):
+    #Tkinter class for background updating of instrument values
     request_queue = Queue.Queue()
     result_queue = Queue.Queue()
     
@@ -49,7 +50,7 @@ class Overview():
     sweeping_flag = 0
     q=queue.Queue()
     points = {"x": [], "y": [], "z": np.array([])}
-    
+    thread_count = 0
     gui = GUI()
     gui.start()
     plot_thread = None
@@ -65,7 +66,7 @@ class Overview():
         self.gui.submit_to_tkinter(loc, np.round(value,3))
         
     def simulate_measure(self, start1, stop1, num1, start2, stop2, num2):
-        #hv.ipython.display(dmap)
+ 
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", message="All-NaN slice encountered")
             #x_data = np.arange(start1, stop1, spacing1)
@@ -79,12 +80,7 @@ class Overview():
             def update_fn():
                 dispsq = hv.Image((self.points["x"], self.points["y"], self.points["z"])).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
                 return dispsq
-            #dmap.event()
-            #def update_fn(): 
-            #    dispsq = hv.Image((points["x"], points["y"], points["z"]))
-            #    return dispsq
-            #dmap = hv.DynamicMap(update_fn, streams=[hv.streams.Stream.define("Dummy")()])
-            #dmap
+
             self.dmap_in = hv.DynamicMap(update_fn, streams=[hv.streams.Stream.define("Dummy")()])
             #print('here2')
             hv.ipython.display(self.dmap_in)
@@ -116,23 +112,20 @@ class Overview():
 
     def sweep2D_inline(self,start1, stop1, spacing1, start2, stop2, spacing2):
 
-        #Need to make sure queue is clear if it was never taken from previous sweep
-        #clear_queue()
+        #create queue that data is passed through
         self.q = queue.Queue()
 
         x_data = np.arange(start1, stop1, spacing1)
         y_data = np.arange(start2, stop2, spacing2)
         points2 = {"x": x_data, "y": y_data, "z":np.full((len(y_data),len(x_data)), np.nan)}
-            #dmap_in = hv.DynamicMap(update_fn_in, streams=[hv.streams.Stream.define("Dummy")()])
-            #hv.ipython.display(dmap_in)
-            #q = queue.Queue()
-        while self.plot_thread:
-            if not self.plot_thread.isAlive():
-                break
-            print(self.plot_thread)
-            self.abort_sweep()
-            time.sleep(1)
-        self.plot_thread = PlottingThread_inline(1, "Thread-1", points2, self.q, self.gui)
+
+        #initially check self.plotthread instead of isAlive because plot_thread is initalized to None since a thread doesn't exist yet
+        if self.plot_thread and self.plot_thread.isAlive():
+            self.plot_thread = PlottingThread_inline(self.thread_count, "Thread %s" % (self.thread_count,), points2, self.q, self.gui, self.plot_thread)
+        else:
+            self.plot_thread = PlottingThread_inline(self.thread_count, "Thread %s" % (self.thread_count,), points2, self.q, self.gui)
+        
+        self.thread_count += 1
         img = self.plot_thread.start()
             #plot_thread.start()
         time.sleep(.1)
@@ -162,28 +155,10 @@ class Overview():
         self.plot_thread.stopflag = True
         return
 
-class PlottingThread (threading.Thread):
-    def __init__(self, threadID, name, init_val1, end_val1, spacing1, init_val2, end_val2, spacing2):
-        threading.Thread.__init__(self)
-        self.threadID = threadID
-        self.name = name
-        self.init_val1 = init_val1
-        self.end_val1 = end_val1
-        self.spacing1 = spacing1
-        
-        self.init_val2 = init_val2
-        self.end_val2 = end_val2
-        self.spacing2 = spacing2
-        
-    def run(self):
-        print("Starting3 " + self.name)
-        img = simulate_measure(self.init_val1, self.end_val1, self.spacing1, self.init_val2, self.end_val2, self.spacing2)
-        print ("Exiting " + self.name)
-        return img
     
 class PlottingThread_inline (threading.Thread):
    
-    def __init__(self, threadID, name, point_d, q, gui):
+    def __init__(self, threadID, name, point_d, q, gui, lthread = None):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.name = name
@@ -192,6 +167,7 @@ class PlottingThread_inline (threading.Thread):
         self.stopflag = False
         self.gui = gui
         self.get_plot = False
+        self.last_thread = lthread
         
     def display(self, loc, value):
         self.gui.submit_to_tkinter(loc, np.round(value,3))
@@ -213,7 +189,12 @@ class PlottingThread_inline (threading.Thread):
             dmap_in = hv.DynamicMap(update_fn_in, streams=[hv.streams.Stream.define("Dummy")()])
             print('here2')
             #print(point_dict)
+            time.sleep(.1)
             hv.ipython.display(dmap_in)
+            print('here2.5')
+            if self.last_thread:
+                print(self.last_thread)
+                self.last_thread.join()
             print('here3')
             for i in range(len(x_data)):
                 for j in range(len(y_data)):
@@ -236,7 +217,11 @@ class PlottingThread_inline (threading.Thread):
             return img
         
     def run(self):
+        #if self.last_thread:
+        #    print(self.last_thread)
+        #    self.last_thread.join()
         print("Starting3 " + self.name)
+        #time.sleep(.1)
         warnings.filterwarnings("ignore", message="All-NaN slice encountered\n drange = (np.nanmin(data), np.nanmax(data))")
         img = self.simulate_measure_inline()#self.point_dict)
         self.qu.put(img)
