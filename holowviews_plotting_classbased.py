@@ -4,15 +4,15 @@ import time
 from holoviews import streams
 import threading
 import warnings
-import queue
 import tkinter as tk
-import queue as Queue
-
+import queue
+import saveClass
+import qdevil_code as qdc
 
 class GUI(threading.Thread):
     #Tkinter class for background updating of instrument values
-    request_queue = Queue.Queue()
-    result_queue = Queue.Queue()
+    request_queue = queue.Queue()
+    result_queue = queue.Queue()
     
     def __init__(self):
         threading.Thread.__init__(self)
@@ -28,7 +28,7 @@ class GUI(threading.Thread):
         def timertick():
             try: 
                 loc, value = self.request_queue.get_nowait()
-            except Queue.Empty:
+            except queue.Empty:
                 pass
             else:
                 #print("Updated")
@@ -54,14 +54,7 @@ class Overview():
     gui = GUI()
     gui.start()
     plot_thread = None
-    #def update_fn(self):
-    #    if not self.points["z"].size:
-    #        dispsq = hv.Image(()).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
-    #    else:
-    #        dispsq = hv.Image((self.points["x"], self.points["y"], self.points["z"])).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
-    #    return dispsq
-    
-    #dmap = hv.DynamicMap(update_fn, streams=[hv.streams.Stream.define("Dummy")()])
+
     def display(self, loc, value):
         self.gui.submit_to_tkinter(loc, np.round(value,3))
         
@@ -153,7 +146,18 @@ class Overview():
         
 
     def abort_sweep(self):
-        self.plot_thread.stopflag = True
+        curr_thread = self.plot_thread
+        while curr_thread.last_thread and curr_thread.last_thread.isAlive():
+            curr_thread = curr_thread.last_thread
+        curr_thread.stopflag = True
+        return
+    
+    def abort_all(self):
+        curr_thread = self.plot_thread
+        while curr_thread.last_thread and curr_thread.last_thread.isAlive():
+            curr_thread.stopflag = True
+            curr_thread = curr_thread.last_thread
+        curr_thread.stopflag = True
         return
 
     
@@ -172,6 +176,29 @@ class PlottingThread_inline (threading.Thread):
         
     def display(self, loc, value):
         self.gui.submit_to_tkinter(loc, np.round(value,3))
+        return
+    
+    def save2D(result, channel1, start1, stop1, channel2, start2,stop2):
+        curr_state =qd._convertDF()
+        ch1 = qd._parseChannel(channel1)[0]
+        ch2 = qd._parseChannel(channel2)[0]
+
+        curr_state.loc['Channel %s' % (ch1,), 'Voltage'] = '%s to %s' % (start1, stop1) 
+        curr_state.loc['Channel %s' % (ch2,), 'Voltage'] = '%s to %s' % (start2, stop2)
+        result = 1
+
+        return savedData(result, curr_state)
+
+    def save2D(result, channel1, start1, stop1):
+        curr_state =qd._convertDF()
+        ch1 = qd._parseChannel(channel1)[0]
+
+        #b.loc['Channel %s' % (ch1,), 'Channel Name'] = 'Small Dot Gate'
+        curr_state.loc['Channel %s' % (ch1,), 'Voltage'] = '%s to %s' % (start1, stop1) 
+
+        result = 1
+
+        return savedData(result, curr_state)
     
     def simulate_measure_inline(self):#,point_dict):
         #nonlocal dmap_in
@@ -193,9 +220,7 @@ class PlottingThread_inline (threading.Thread):
             time.sleep(.1)
             
             self.qu.put(dmap_in)
-            #hv.ipython.display(dmap_in)
-            
-            print('here2.5')
+
             if self.last_thread:
                 print(self.last_thread)
                 self.last_thread.join()
@@ -203,8 +228,12 @@ class PlottingThread_inline (threading.Thread):
             for i in range(len(x_data)):
                 for j in range(len(y_data)):
                     if self.stopflag:
-                        img = list(dmap_in.data.items())[0][1] #This gets the hv.Image object from a Dynamic Map
-                        return img
+                        try:
+                            img = list(dmap_in.data.items())[0][1] #This gets the hv.Image object from a Dynamic Map
+                            #save
+                            return img
+                        except IndexError:
+                            return
                     if self.get_plot:
                         #img = list(dmap_in.data.items())[0][1]
                         #self.qu.put(img)
@@ -218,18 +247,17 @@ class PlottingThread_inline (threading.Thread):
                     dmap_in.event()
 
             img = list(dmap_in.data.items())[0][1]
-
+            #save
             return img
         
     def run(self):
-        #if self.last_thread:
-        #    print(self.last_thread)
-        #    self.last_thread.join()
+   
         print("Starting3 " + self.name)
         #time.sleep(.1)
         warnings.filterwarnings("ignore", message="All-NaN slice encountered\n drange = (np.nanmin(data), np.nanmax(data))")
-        img = self.simulate_measure_inline()#self.point_dict)
-        self.qu.put(img)
+        img = self.simulate_measure_inline()
+        if img:
+            self.qu.put(img)
         print ("Exiting " + self.name)
         return img
     
