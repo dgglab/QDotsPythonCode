@@ -1,41 +1,57 @@
+import warnings
+import holoviews as hv
+import time
+import numpy as np
+import threading
+import saveClass
+
 class PlottingThread_inline (threading.Thread):
    
-    def __init__(self, threadID, name, point_d, q, gui, lthread = None):
+    def __init__(self, threadID, name, point_d, data_queue, gui, qdevil, lthread = None):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.name = name
         self.point_dict = point_d
-        self.qu = q
+        self.qu = data_queue
         self.stopflag = False
         self.gui = gui
         self.get_plot = False
         self.last_thread = lthread
+        self.qd = qdevil
         
     def display(self, loc, value):
         self.gui.submit_to_tkinter(loc, np.round(value,3))
         return
     
     def save2D(result, channel1, start1, stop1, channel2, start2,stop2):
-        curr_state =qd._convertDF()
-        ch1 = qd._parseChannel(channel1)[0]
-        ch2 = qd._parseChannel(channel2)[0]
+        curr_state = self.qd._convertDF()
+        ch1 = self.qd._parseChannel(channel1)[0]
+        ch2 = self.qd._parseChannel(channel2)[0]
 
         curr_state.loc['Channel %s' % (ch1,), 'Voltage'] = '%s to %s' % (start1, stop1) 
         curr_state.loc['Channel %s' % (ch2,), 'Voltage'] = '%s to %s' % (start2, stop2)
-        result = 1
+        
+        t = time.localtime()
+        name = time.strftime('%b-%d-%Y_%H:%M:%S', t)
+        return saveClass.savedData(result, curr_state, name)
 
-        return savedData(result, curr_state)
-
-    def save2D(result, channel1, start1, stop1):
-        curr_state =qd._convertDF()
-        ch1 = qd._parseChannel(channel1)[0]
+    def save1D(result, channel1, start1, stop1):
+        curr_state =self.qd._convertDF()
+        ch1 = self.qd._parseChannel(channel1)[0]
 
         #b.loc['Channel %s' % (ch1,), 'Channel Name'] = 'Small Dot Gate'
         curr_state.loc['Channel %s' % (ch1,), 'Voltage'] = '%s to %s' % (start1, stop1) 
+        t = time.localtime()
+        name = time.strftime('%b-%d-%Y_%H:%M:%S', t)
 
-        result = 1
-
-        return savedData(result, curr_state)
+        return saveClass.savedData(result, curr_state, name)
+    
+    def save(self, savedData):
+        """Input is the savedData object that is returned from a sweep."""
+        save_name = savedData.name
+        with open('%s.p' % (save_name,), 'wb') as file:
+            pickle.dump(savedData, file)
+    return
     
     def simulate_measure_inline(self):#,point_dict):
         #nonlocal dmap_in
@@ -94,9 +110,13 @@ class PlottingThread_inline (threading.Thread):
         warnings.filterwarnings("ignore", message="All-NaN slice encountered\n drange = (np.nanmin(data), np.nanmax(data))")
         img = self.simulate_measure_inline()
         if img:
-            self.qu.put(img)
+            data = self.save2D(img,1, min(self.point_dict['x']), max(self.point_dict['y']), 2, min(self.point_dict['y']), max(self.point_dict['y']))
+            self.save(data)
+
+            self.qu.put(data)
         print ("Exiting " + self.name)
         return img
     
     def stop(self):
         return
+    

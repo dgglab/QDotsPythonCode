@@ -1,7 +1,9 @@
 class savedData:
-    def __init__(self, result, metadata):
+    comment = None
+    def __init__(self, result, metadata, name):
         self.plot = result
         self._metadata = metadata
+        self.name = name
         return
     
     @property
@@ -11,6 +13,13 @@ class savedData:
     
     @property
     def state(self):
-        return self.metadata
+        return self._metadata
+    
+    def __repr__(self):
+        if self.comment:
+            return self.comment
+        else:
+            return 'No comment added'
+        
     
     

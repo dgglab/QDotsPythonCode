@@ -9,7 +9,7 @@ class QDevil:
     #voltage_list = np.zeros(48)
     voltage_dict = {n: 0 for n in range(1,49)}
     
-    def setGate(self, name, channel, override=False):
+    def _nameGate(self, name, channel, override=False):
         if type(name) != str:
             raise Exception("Please use a string for channel name")
         
@@ -45,7 +45,7 @@ class QDevil:
         self.channel_mapping[name] = channel
         return
     
-    def ramp(self, channels, voltages):
+    def _ramp(self, channels, voltages):
         """Ramp selected channels to the given voltages. Input can be the Name or number of the channel and can also be given as an array"""
         #Name can be the name given to the channel or the actual channel number itself
         if type(channels) in {np.ndarray, list, tuple}:
