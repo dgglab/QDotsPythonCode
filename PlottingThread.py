@@ -32,7 +32,7 @@ class PlottingThread_inline (threading.Thread):
         curr_state.loc['Channel %s' % (ch2,), 'Voltage'] = '%s to %s' % (start2, stop2)
         
         t = time.localtime()
-        name = time.strftime('%b-%d-%Y_%H:%M:%S', t)
+        name = time.strftime('%b-%d-%Y_%H-%M-%S', t)
         return saveClass.savedData(result, curr_state, name)
 
     def save1D(self,result, channel1, start1, stop1):
@@ -95,16 +95,15 @@ class PlottingThread_inline (threading.Thread):
                     time.sleep(.1)
                     #points['z'][i,j] =points['x'][i]**2+points['y'][j]**2
                     self.point_dict['z'][j,i] = self.point_dict['x'][i]+self.point_dict['y'][j]
-                    print('g')
+                    #print('g')
                     self.display([0,1], self.point_dict['x'][i])
                     self.display([1,1], self.point_dict['y'][j])
-                    time.sleep(.1)
                     dmap_in.event()
-                    print('h')
-            #time.sleep(.1)
+                    #print('h')
+            print(dmap_in)
+            print(dmap_in.data.items())
             img = list(dmap_in.data.items())[0][1]
-            #save
-            print('here4')
+
             return img
         
     def run(self):
@@ -113,13 +112,15 @@ class PlottingThread_inline (threading.Thread):
         #time.sleep(.1)
         warnings.filterwarnings("ignore", message="All-NaN slice encountered\n drange = (np.nanmin(data), np.nanmax(data))")
         img = self.simulate_measure_inline()
+        print('here4')
         print(img)
         if img:
             data = self.save2D(img,1, min(self.point_dict['x']), max(self.point_dict['y']), 2, min(self.point_dict['y']), max(self.point_dict['y']))
-            self.save(data)
+            #self.save(data)
             
             self.qu.put(data)
-            print('this')
+            print(data.state)
+            self.save(data)
         print ("Exiting " + self.name)
         return img
     

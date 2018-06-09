@@ -9,6 +9,7 @@ import queue
 import saveClass
 import qdevil_code as qdc
 import PlottingThread
+import pickle
 
 class GUI(threading.Thread):
     #Tkinter class for background updating of instrument values
@@ -127,6 +128,7 @@ class Overview():
         print(self.plot_thread.isAlive())
             #plot_thread.join()
         img = self.q.get()
+        self.plot_thread.join() #Temporary, used to see this plots full outputs
         return img
 
     def get_plot(self):
