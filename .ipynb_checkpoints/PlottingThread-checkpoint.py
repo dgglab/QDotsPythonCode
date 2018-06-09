@@ -23,7 +23,7 @@ class PlottingThread_inline (threading.Thread):
         self.gui.submit_to_tkinter(loc, np.round(value,3))
         return
     
-    def save2D(result, channel1, start1, stop1, channel2, start2,stop2):
+    def save2D(self,result, channel1, start1, stop1, channel2, start2,stop2):
         curr_state = self.qd._convertDF()
         ch1 = self.qd._parseChannel(channel1)[0]
         ch2 = self.qd._parseChannel(channel2)[0]
@@ -35,7 +35,7 @@ class PlottingThread_inline (threading.Thread):
         name = time.strftime('%b-%d-%Y_%H:%M:%S', t)
         return saveClass.savedData(result, curr_state, name)
 
-    def save1D(result, channel1, start1, stop1):
+    def save1D(self,result, channel1, start1, stop1):
         curr_state =self.qd._convertDF()
         ch1 = self.qd._parseChannel(channel1)[0]
 
@@ -95,10 +95,13 @@ class PlottingThread_inline (threading.Thread):
                     time.sleep(.1)
                     #points['z'][i,j] =points['x'][i]**2+points['y'][j]**2
                     self.point_dict['z'][j,i] = self.point_dict['x'][i]+self.point_dict['y'][j]
+                    print('g')
                     self.display([0,1], self.point_dict['x'][i])
                     self.display([1,1], self.point_dict['y'][j])
+                    time.sleep(.1)
                     dmap_in.event()
-
+                    print('h')
+            #time.sleep(.1)
             img = list(dmap_in.data.items())[0][1]
             #save
             print('here4')
