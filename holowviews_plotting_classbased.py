@@ -116,12 +116,12 @@ class Overview():
 
         #initially check self.plotthread instead of isAlive because plot_thread is initalized to None since a thread doesn't exist yet
         if self.plot_thread and self.plot_thread.isAlive():
-            self.plot_thread = PlottingThread.PlottingThread_inline(self.thread_count, "Thread %s" % (self.thread_count,), points2, self.q, self.gui, self.plot_thread)
+            self.plot_thread = PlottingThread.PlottingThread_inline(self.thread_count, "Thread %s" % (self.thread_count,), points2, self.q, self.gui, self._qdac, self.plot_thread)
         else:
-            self.plot_thread = PlottingThread.PlottingThread_inline(self.thread_count, "Thread %s" % (self.thread_count,), points2, self.q, self.gui)
+            self.plot_thread = PlottingThread.PlottingThread_inline(self.thread_count, "Thread %s" % (self.thread_count,), points2, self.q, self.gui, self._qdac)
         
         self.thread_count += 1
-        img = self.plot_thread.start()
+        self.plot_thread.start()
             #plot_thread.start()
         #time.sleep(1)
         print(self.plot_thread.isAlive())
@@ -206,13 +206,13 @@ def cut2(image):
     return dmap
 
 def save(savedData, name = False):
-        """Input is the savedData object that is returned from a sweep. Optional argument is the name of the saved file. Default behavior is to overwrite the existing file name that is automatically given"""
-        if name:
-            save_name = name
-        else:
-            save_name = savedData.name
-        with open('%s.p' % (save_name,), 'wb') as file:
-            pickle.dump(savedData, file)
+    """Input is the savedData object that is returned from a sweep. Optional argument is the name of the saved file. Default behavior is to overwrite the existing file name that is automatically given"""
+    if name:
+        save_name = name
+    else:
+        save_name = savedData.name
+    with open('%s.p' % (save_name,), 'wb') as file:
+        pickle.dump(savedData, file)
     return
 
 def load(filename):

@@ -51,7 +51,7 @@ class PlottingThread_inline (threading.Thread):
         save_name = savedData.name
         with open('%s.p' % (save_name,), 'wb') as file:
             pickle.dump(savedData, file)
-    return
+        return
     
     def simulate_measure_inline(self):#,point_dict):
         #nonlocal dmap_in
@@ -101,6 +101,7 @@ class PlottingThread_inline (threading.Thread):
 
             img = list(dmap_in.data.items())[0][1]
             #save
+            print('here4')
             return img
         
     def run(self):
@@ -109,11 +110,13 @@ class PlottingThread_inline (threading.Thread):
         #time.sleep(.1)
         warnings.filterwarnings("ignore", message="All-NaN slice encountered\n drange = (np.nanmin(data), np.nanmax(data))")
         img = self.simulate_measure_inline()
+        print(img)
         if img:
             data = self.save2D(img,1, min(self.point_dict['x']), max(self.point_dict['y']), 2, min(self.point_dict['y']), max(self.point_dict['y']))
             self.save(data)
-
+            
             self.qu.put(data)
+            print('this')
         print ("Exiting " + self.name)
         return img
     
