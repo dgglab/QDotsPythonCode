@@ -82,7 +82,7 @@ class PlottingThread_inline (threading.Thread):
             for i in range(len(x_data)):
                 for j in range(len(y_data)):
                     if self.stopflag:
-                        if not np.isnan(point_dict['z']).all():
+                        if not np.isnan(self.point_dict['z']).all():
                             #create another copy of the image because dynamic map object now exists in main thread
                             img = hv.Image((self.point_dict["x"], self.point_dict["y"], self.point_dict["z"])).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
 
