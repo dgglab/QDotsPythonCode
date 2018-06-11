@@ -58,7 +58,7 @@ class Overview():
     plot_thread = None
     _qdac = qdc.QDevil()
     
-    def display(self, loc, value):
+    def display_voltage(self, loc, value):
         self.gui.submit_to_tkinter(loc, np.round(value,3))
         
     def simulate_measure(self, start1, stop1, num1, start2, stop2, num2):
@@ -88,8 +88,8 @@ class Overview():
                         time.sleep(.1)
                         #points['z'][i,j] =points['x'][i]**2+points['y'][j]**2
                         self.points['z'][j,i] =self.points['x'][i]+self.points['y'][j]
-                        self.display([0,1], self.points['x'][i])
-                        self.display([1,1], self.points['y'][j])
+                        self.display_voltage([0,1], self.points['x'][i])
+                        self.display_voltage([1,1], self.points['y'][j])
                         self.dmap_in.event()
             except KeyboardInterrupt:
                 pass
@@ -128,7 +128,7 @@ class Overview():
         print(self.plot_thread.isAlive())
             #plot_thread.join()
         img = self.q.get()
-        self.plot_thread.join() #Temporary, used to see this plots full outputs
+        #self.plot_thread.join() #Temporary, used to see this plots full outputs
         return img
 
     def get_plot(self):
@@ -165,10 +165,13 @@ class Overview():
         return
 
     def ramp(self, channels, voltages):
-        return self._qdac._ramp(channels, voltages)
+        self._qdac._ramp(channels, voltages)
+        #update tkinter
+        return
     
     def nameGate(self,name, channel, override=False):
-        return self._qdac._nameGate(name, channel, override)
+        self._qdac._nameGate(name, channel, override)
+        #update tkinter#
         
     
     

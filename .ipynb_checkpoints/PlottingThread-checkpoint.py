@@ -4,6 +4,7 @@ import time
 import numpy as np
 import threading
 import saveClass
+import pickle
 
 class PlottingThread_inline (threading.Thread):
    
@@ -19,7 +20,7 @@ class PlottingThread_inline (threading.Thread):
         self.last_thread = lthread
         self.qd = qdevil
         
-    def display(self, loc, value):
+    def display_voltage(self, loc, value):
         self.gui.submit_to_tkinter(loc, np.round(value,3))
         return
     
@@ -81,12 +82,12 @@ class PlottingThread_inline (threading.Thread):
             for i in range(len(x_data)):
                 for j in range(len(y_data)):
                     if self.stopflag:
-                        try:
-                            img = list(dmap_in.data.items())[0][1] #This gets the hv.Image object from a Dynamic Map
-                            #save
+                        if not np.isnan(point_dict['z']).all():
+                            #create another copy of the image because dynamic map object now exists in main thread
+                            img = hv.Image((self.point_dict["x"], self.point_dict["y"], self.point_dict["z"])).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
+
                             return img
-                        except IndexError:
-                            return
+                        return
                     if self.get_plot:
                         #img = list(dmap_in.data.items())[0][1]
                         #self.qu.put(img)
@@ -96,14 +97,11 @@ class PlottingThread_inline (threading.Thread):
                     #points['z'][i,j] =points['x'][i]**2+points['y'][j]**2
                     self.point_dict['z'][j,i] = self.point_dict['x'][i]+self.point_dict['y'][j]
                     #print('g')
-                    self.display([0,1], self.point_dict['x'][i])
-                    self.display([1,1], self.point_dict['y'][j])
+                    self.display_voltage([1,1], self.point_dict['x'][i])
+                    self.display_voltage([2,1], self.point_dict['y'][j])
                     dmap_in.event()
                     #print('h')
-            print(dmap_in)
-            print(dmap_in.data.items())
-            img = list(dmap_in.data.items())[0][1]
-
+            img = hv.Image((self.point_dict["x"], self.point_dict["y"], self.point_dict["z"])).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
             return img
         
     def run(self):
