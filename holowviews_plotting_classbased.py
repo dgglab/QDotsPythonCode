@@ -22,8 +22,12 @@ class GUI(threading.Thread):
     def submit_to_tkinter(self,loc, value):
         self.request_queue.put((loc, value))
         #return result_queue.get()
+        
+    def update_name(self, loc, name):
+        self.request_queue.put((loc, name))
 
     t = None
+    label_dict ={}
     def run(self):
         #global t
 
@@ -36,12 +40,28 @@ class GUI(threading.Thread):
                 #print("Updated")
                 #retval = callable(*args, **kwargs)
                 #result_queue.put(retval)
-                tk.Label(self.t,text='%s' % (value,), borderwidth=1 ).grid(row=loc[0],column=loc[1])
+                #print(self.label_dict)
+                display_label = self.label_dict[loc[0]][loc[1]]
+                display_label.config(text='%s' % (value,))
+                #tk.Label(self.t,text='%s' % (value,), borderwidth=1 ).grid(row=loc[0],column=loc[1])
 
             self.t.after(10, timertick)
 
         self.t = tk.Tk()
         self.t.configure(width=640, height=480)
+        
+        for i in range(1,49):
+            label_list = []
+            for j in range(3):
+                if j == 0:
+                    tklabel = tk.Label(self.t, text='Channel %s' % (i,), borderwidth = 1)
+                else:
+                    tklabel = tk.Label(self.t,text='', borderwidth = 1 )#.grid(row=i,column=j)
+                tklabel.grid(row=i, column=j)
+                #print(tklabel)
+                label_list.append(tklabel)
+                
+            self.label_dict[i] = label_list
         #b = tk.Button(text='test', name='button', command=exit)
         #b.place(x=0, y=0)
         timertick()
@@ -106,16 +126,21 @@ class Overview():
         return img
 
 
-    def sweep2D_inline(self,start1, stop1, spacing1, start2, stop2, spacing2):
+    def sweep2D_inline(self,start1, stop1, num1, start2, stop2, num2):
 
         #create queue that data is passed through
         self.q = queue.Queue()
 
-        x_data = np.arange(start1, stop1, spacing1)
-        y_data = np.arange(start2, stop2, spacing2)
+        #x_data = np.arange(start1, stop1, spacing1)
+        #y_data = np.arange(start2, stop2, spacing2)
+        
+        #Use linspace to include end points in interval and give # of points instead of step
+            #Add one to number of steps for convenience. For example if you want interval [0,3] with step sizes of 1, the number of steps is 4 but now can input (3-0)/1 = 3 and get desired output 
+        x_data = np.linspace(start1, stop1, num1+1)
+        y_data = np.linspace(start2, stop2, num2+1)
         points2 = {"x": x_data, "y": y_data, "z":np.full((len(y_data),len(x_data)), np.nan)}
 
-        #initially check self.plotthread instead of isAlive because plot_thread is initalized to None since a thread doesn't exist yet
+        #initially check self.plot_thread instead of isAlive because plot_thread is initalized to None since a thread doesn't exist yet
         if self.plot_thread and self.plot_thread.isAlive():
             self.plot_thread = PlottingThread.PlottingThread_inline(self.thread_count, "Thread %s" % (self.thread_count,), points2, self.q, self.gui, self._qdac, self.plot_thread)
         else:
@@ -139,20 +164,27 @@ class Overview():
     
     def get_plot_running(self, wait_time =10):
         #Used to get plot of currently running measurement
-        self.plot_thread.get_plot = True
+        curr_thread = self._curr_thread
+        curr_thread.get_plot = True
         i = 0
-        while self.plot_thread.get_plot:
+        while curr_thread.get_plot:
             time.sleep(1)
             i +=1
             if i == wait_time:
-                print("Waited 10 seconds without response, if measurement time of a point is longer than this use optional argument wait_time")
+                print("Waited 10 seconds without response, if measurement time of a point is longer than this use optional argument wait_time")     
+                return
         return self.get_plot()
         
 
-    def abort_sweep(self):
+    @property
+    def _curr_thread(self):
         curr_thread = self.plot_thread
         while curr_thread.last_thread and curr_thread.last_thread.isAlive():
             curr_thread = curr_thread.last_thread
+        return curr_thread
+    
+    def abort_sweep(self):
+        curr_thread = self._curr_thread
         curr_thread.stopflag = True
         return
     
@@ -172,7 +204,21 @@ class Overview():
     def nameGate(self,name, channel, override=False):
         self._qdac._nameGate(name, channel, override)
         #update tkinter#
+        #Channel name column is 1
+        loc = [channel, 1]
+        self.gui.update_name(loc, name)
         
+    @property
+    def current_queue(self):
+        queue_list = []
+        curr_thread = self.plot_thread
+        while curr_thread.last_thread and curr_thread.last_thread.isAlive():
+            queue_list.append(curr_thread._sweepDescription)
+            curr_thread = curr_thread.last_thread
+        queue_list.append(curr_thread._sweepDescription)
+        for sweep in queue_list[::-1]:
+            print(sweep)
+        return
     
     
     
