@@ -229,6 +229,8 @@ class Overview():
                 curr_thread.stopflag = True
                 if prev_thread:
                     prev_thread.last_thread = curr_thread.last_thread
+                else:
+                    self.plot_thread = curr_thread.last_thread
                 return "Sweep ID %s aborted" % (id,)
             prev_thread = curr_thread
             curr_thread = curr_thread.last_thread
