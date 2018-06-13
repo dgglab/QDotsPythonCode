@@ -25,7 +25,7 @@ class PlottingThread_inline (threading.Thread):
         return
     @property
     def _sweepDescription(self):
-        return "Sweep from x=%s to %s in %s steps and y=%s to %s in %s steps" % (min(self.point_dict['x']), max(self.point_dict['x']), len(self.point_dict['x'])-1, min(self.point_dict['y']), max(self.point_dict['y']), len(self.point_dict['y'])-1)
+        return "Sweep ID %s, from x=%s to %s in %s steps and y=%s to %s in %s steps" % (self.threadID,min(self.point_dict['x']), max(self.point_dict['x']), len(self.point_dict['x'])-1, min(self.point_dict['y']), max(self.point_dict['y']), len(self.point_dict['y'])-1)
     
     def display_voltage(self, loc, value):
         self.gui.submit_to_tkinter(loc, np.round(value,6))
@@ -84,7 +84,7 @@ class PlottingThread_inline (threading.Thread):
             self.qu.put(dmap_in)
 
             if self.last_thread:
-                print(self.last_thread)
+                print(self.last_thread.threadID)
                 self.last_thread.join()
             print('here3')
             for i in range(len(x_data)):

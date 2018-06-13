@@ -212,13 +212,27 @@ class Overview():
     def current_queue(self):
         queue_list = []
         curr_thread = self.plot_thread
-        while curr_thread.last_thread and curr_thread.last_thread.isAlive():
+        while curr_thread and curr_thread.isAlive():
             queue_list.append(curr_thread._sweepDescription)
             curr_thread = curr_thread.last_thread
-        queue_list.append(curr_thread._sweepDescription)
+        #queue_list.append(curr_thread._sweepDescription)
         for sweep in queue_list[::-1]:
             print(sweep)
         return
+    
+    def abortSweepID(self, id):
+        """Abort the given sweep ID, whether it is currently running or in the queue"""
+        curr_thread = self.plot_thread
+        prev_thread = None
+        while curr_thread and curr_thread.isAlive():
+            if curr_thread.threadID == id:
+                curr_thread.stopflag = True
+                if prev_thread:
+                    prev_thread.last_thread = curr_thread.last_thread
+                return "Sweep ID %s aborted" % (id,)
+            prev_thread = curr_thread
+            curr_thread = curr_thread.last_thread
+        return "No queued sweep with ID %s!" % (id,)
     
     
     
