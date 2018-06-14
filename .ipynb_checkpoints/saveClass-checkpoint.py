@@ -1,9 +1,14 @@
 class savedData:
-    comment = None
-    def __init__(self, result, metadata, name):
+    def __init__(self, result, metadata, name, description):
         self._plot = result
         self._metadata = metadata
         self.name = name
+        
+        #This assumes that object always created with the date as the name (which is the current functionality)
+        self.date = name
+        
+        self.description = description
+        self.comment = None
         return
     
     @property
@@ -23,7 +28,7 @@ class savedData:
         if self.comment:
             return self.comment
         else:
-            return 'No comment added'
+            return self.description
         
     
     

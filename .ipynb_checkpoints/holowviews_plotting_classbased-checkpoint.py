@@ -24,6 +24,7 @@ class GUI(threading.Thread):
         #return result_queue.get()
         
     def update_name(self, loc, name):
+        """Name goes in column 1, with row = channel #"""
         self.request_queue.put((loc, name))
 
     t = None
@@ -37,27 +38,28 @@ class GUI(threading.Thread):
             except queue.Empty:
                 pass
             else:
-                #print("Updated")
-                #retval = callable(*args, **kwargs)
-                #result_queue.put(retval)
-                #print(self.label_dict)
+
                 display_label = self.label_dict[loc[0]][loc[1]]
                 display_label.config(text='%s' % (value,))
-                #tk.Label(self.t,text='%s' % (value,), borderwidth=1 ).grid(row=loc[0],column=loc[1])
 
             self.t.after(10, timertick)
 
         self.t = tk.Tk()
-        self.t.configure(width=640, height=480)
+        self.t.configure(width=640, height=480, background ='black')
+        
+        #Set Headers
+        tk.Label(self.t, text = 'Channel #', font = ('Calibri',10, 'bold'),bg='white', borderwidth = 0, width=10).grid(row=0, column=0, padx =1, pady=1)
+        tk.Label(self.t, text = 'Name', font = ('Calibri',10, 'bold'), bg='white', borderwidth = 0, width=10).grid(row=0, column =1,padx =1, pady=1)
+        tk.Label(self.t, text = 'Voltage',font = ('Calibri',10, 'bold'),bg='white', borderwidth = 0, width=10).grid(row=0, column=2, padx =1, pady=1)   
         
         for i in range(1,49):
             label_list = []
             for j in range(3):
                 if j == 0:
-                    tklabel = tk.Label(self.t, text='Channel %s' % (i,), borderwidth = 1)
+                    tklabel = tk.Label(self.t, text='Channel %s' % (i,), font = ('Calibri',10), bg='white', borderwidth = 0, width=10 )
                 else:
-                    tklabel = tk.Label(self.t,text='', borderwidth = 1 )#.grid(row=i,column=j)
-                tklabel.grid(row=i, column=j)
+                    tklabel = tk.Label(self.t,text='', font = ('Calibri',10),bg='white', borderwidth = 0, width = 10)
+                tklabel.grid(row=i, column=j, padx =1, pady=1)
                 #print(tklabel)
                 label_list.append(tklabel)
                 
@@ -213,7 +215,7 @@ class Overview():
         queue_list = []
         curr_thread = self.plot_thread
         while curr_thread and curr_thread.isAlive():
-            queue_list.append(curr_thread._sweepDescription)
+            queue_list.append("ID %s: " % (curr_thread.threadID,) + curr_thread._sweepDescription)
             curr_thread = curr_thread.last_thread
         #queue_list.append(curr_thread._sweepDescription)
         for sweep in queue_list[::-1]:

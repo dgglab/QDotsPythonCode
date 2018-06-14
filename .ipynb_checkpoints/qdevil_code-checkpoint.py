@@ -133,6 +133,8 @@ class QDevil:
 
         channel_df = pd.DataFrame(data=channel_table, index = channel_index)
         #channel_df = channel_df[['Channel Number', 'Channel Name', 'Voltage']]
+        
+        #Rearrange columns to ensure that Channel name comes before Voltage
         channel_df = channel_df[['Channel Name', 'Voltage']]
         return channel_df
             
