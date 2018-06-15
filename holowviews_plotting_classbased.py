@@ -10,6 +10,7 @@ import saveClass
 import qdevil_code as qdc
 import PlottingThread
 import pickle
+import ipywidgets as widgets
 
 class GUI(threading.Thread):
     #Tkinter class for background updating of instrument values
@@ -72,7 +73,11 @@ class GUI(threading.Thread):
 
 class Overview():
     sweeping_flag = 0
+    
     q=queue.Queue()
+    retrieval_queue = queue.Queue()
+    
+    
     points = {"x": [], "y": [], "z": np.array([])}
     thread_count = 0
     gui = GUI()
@@ -144,9 +149,9 @@ class Overview():
 
         #initially check self.plot_thread instead of isAlive because plot_thread is initalized to None since a thread doesn't exist yet
         if self.plot_thread and self.plot_thread.isAlive():
-            self.plot_thread = PlottingThread.PlottingThread_inline(self.thread_count, "Thread %s" % (self.thread_count,), points2, self.q, self.gui, self._qdac, self.plot_thread)
+            self.plot_thread = PlottingThread.PlottingThread_inline(self.thread_count, "Thread %s" % (self.thread_count,), points2, self.q, self.retrieval_queue, self.gui, self._qdac, self.plot_thread)
         else:
-            self.plot_thread = PlottingThread.PlottingThread_inline(self.thread_count, "Thread %s" % (self.thread_count,), points2, self.q, self.gui, self._qdac)
+            self.plot_thread = PlottingThread.PlottingThread_inline(self.thread_count, "Thread %s" % (self.thread_count,), points2, self.q, self.retrieval_queue, self.gui, self._qdac)
         
         self.thread_count += 1
         self.plot_thread.start()
@@ -154,19 +159,22 @@ class Overview():
         #time.sleep(1)
         print(self.plot_thread.isAlive())
             #plot_thread.join()
+            
+        #Using .get instead of no wait because .get blocks until it actually gtes an object
         img = self.q.get()
         #self.plot_thread.join() #Temporary, used to see this plots full outputs
         return img
 
     def get_plot(self):
         try:
-            return self.q.get_nowait()
+            return self.retrieval_queue.get_nowait()
         except queue.Empty:
             print("No Plot to get!")
+        
     
     def get_plot_running(self, wait_time =10):
         #Used to get plot of currently running measurement
-        curr_thread = self._curr_thread
+        curr_thread = self._runningThread
         curr_thread.get_plot = True
         i = 0
         while curr_thread.get_plot:
@@ -179,14 +187,15 @@ class Overview():
         
 
     @property
-    def _curr_thread(self):
+    def _runningThread(self):
+        """Returns the currently running thread"""
         curr_thread = self.plot_thread
         while curr_thread.last_thread and curr_thread.last_thread.isAlive():
             curr_thread = curr_thread.last_thread
         return curr_thread
     
     def abort_sweep(self):
-        curr_thread = self._curr_thread
+        curr_thread = self._runningThread
         curr_thread.stopflag = True
         return
     
@@ -246,6 +255,7 @@ def initialize():
 
 def cut(image):
         tap = streams.SingleTap(source=image)
+        print(tap)
 
         vline = hv.DynamicMap(lambda x, y: hv.VLine(image.closest((x,0))[0] if x else 0), streams=[tap])
         hline = hv.DynamicMap(lambda x, y: hv.HLine(image.closest((0,y))[1] if y else 0), streams=[tap])
@@ -273,6 +283,36 @@ def cut2(image):
 
 
     return dmap
+
+
+
+def cut3(image):
+    #Cut with slider instead of clicking on point. This fixes the problem of limited step size of .01 when using redim method. Instead using ipython widget which controls a created stream object, which can be passed into the dynamic map.
+    
+    class xy(hv.streams.Stream):
+        x = param.Number(default=0.0,  doc='An X position.')
+        y = param.Number(default=0.0, doc='A Y position.')
+    
+    x_axis = np.unique(image.dimension_values(0))
+    y_axis = np.unique(image.dimension_values(1))
+    xw=widgets.SelectionSlider(options=[("%g"%i,i) for i in x_axis])
+    yw=widgets.SelectionSlider(options=[("%g"%i,i) for i in y_axis])
+    #display(xw)
+    #display(yw)
+    xyst = xy(x=x_axis[0], y=y_axis[0])
+    #dmap = hv.DynamicMap(lambda x, y: hv.Curve(([x,2*x], [2.0*y,3*y])), streams=[xyst])
+    def marker(x,y):
+        crosssection1 = image.sample(x=x).opts(norm=dict(framewise=True))#.opts(plot=dict(width = 200),norm=dict(framewise=True))
+        crosssection1y = image.sample(y=y).opts(norm=dict(framewise=True))#.opts(plot=dict(height = 200), norm=dict(framewise=True))
+        return hv.Layout(image * hv.VLine(x) * hv.HLine(y) + crosssection1+crosssection1y).cols(2)
+    dmap = hv.DynamicMap(marker, streams=[xyst])
+    
+    def plot(x,y):
+        xyst.event(x=x, y=y)
+        
+
+    hv.ipython.display(dmap)
+    return widgets.interact(plot, x=widgets.SelectionSlider(options=[("%g"%i,i) for i in x_axis], continuous_update=False), y=widgets.SelectionSlider(options=[("%g"%i,i) for i in y_axis]))
 
 def save(savedData, name = False):
     """Input is the savedData object that is returned from a sweep. Optional argument is the name of the saved file. Default behavior is to overwrite the existing file name that is automatically given"""

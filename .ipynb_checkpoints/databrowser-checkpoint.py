@@ -9,7 +9,7 @@ def list_data():
     pd.set_option('display.max_colwidth', -1)
     
     datafiles = glob.glob('*.p')
-    print(datafiles)
+    #print(datafiles)
     data_table = {'Date': [], 'Description': [], 'Comment': [], 'Thumbnail': []}
     for file in datafiles:
         try:
@@ -23,13 +23,13 @@ def list_data():
             
             thumbnail_file = './DataThumbnails/' +file[:-1] +'png' 
             if os.path.isfile(thumbnail_file):
-                data_table['Thumbnail'].append('<img src="%s"/>' % (thumbnail_file,))
+                data_table['Thumbnail'].append('<img src="%s" height="50" width="50"/>' % (thumbnail_file,))
             else:
                 data_table['Thumbnail'].append('')
                 
         except EOFError:
             pass
-    print(data_table['Thumbnail'])
+    #print(data_table['Thumbnail'])
     data_df = pd.DataFrame(data = data_table)
     data_df = data_df[['Date', 'Description', 'Comment', 'Thumbnail']]
     return HTML(data_df.to_html(escape=False))
@@ -55,5 +55,9 @@ def loadnum(number):
         except EOFError:
             pass
     return 'Index out of range!'
+
+def query(comment):
+    """Returns table of all data that contains the input comment"""
+    return
     
 

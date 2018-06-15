@@ -5,10 +5,11 @@ import numpy as np
 import threading
 import saveClass
 import pickle
+import queue
 
 class PlottingThread_inline (threading.Thread):
    
-    def __init__(self, threadID, name, point_d, data_queue, gui, qdevil, lthread = None):
+    def __init__(self, threadID, name, point_d, data_queue, retr_queue, gui, qdevil, lthread = None):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.name = name
@@ -19,10 +20,7 @@ class PlottingThread_inline (threading.Thread):
         self.get_plot = False
         self.last_thread = lthread
         self.qd = qdevil
-        
-    def __repr__(self):
-        #Used to supress the output 'PlottingThread_line object' when running sweep
-        return
+        self.retrieval_queue = retr_queue
     
     @property
     def _sweepDescription(self):
@@ -97,9 +95,11 @@ class PlottingThread_inline (threading.Thread):
                             return img
                         return
                     if self.get_plot:
-                        #img = list(dmap_in.data.items())[0][1]
+                        #Used to get plot while its running
+                        img = hv.Image((self.point_dict["x"], self.point_dict["y"], self.point_dict["z"])).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
+                        data = self.save2D(img,1, min(self.point_dict['x']), max(self.point_dict['x']), 2, min(self.point_dict['y']), max(self.point_dict['y']))
                         #self.qu.put(img)
-                        self.qu.put(dmap_in)
+                        self.sendData(data)
                         self.get_plot = False
                     time.sleep(.1)
                     #points['z'][i,j] =points['x'][i]**2+points['y'][j]**2
@@ -114,6 +114,15 @@ class PlottingThread_inline (threading.Thread):
             img = hv.Image((self.point_dict["x"], self.point_dict["y"], self.point_dict["z"])).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
             return img
         
+        
+    def sendData(self, data):
+        while(1):
+            try:
+                self.retrieval_queue.get_nowait()
+            except queue.Empty:
+                break
+        self.retrieval_queue.put(data)
+    
     def run(self):
    
         print("Starting " + self.name)
@@ -125,7 +134,8 @@ class PlottingThread_inline (threading.Thread):
             data = self.save2D(img,1, min(self.point_dict['x']), max(self.point_dict['x']), 2, min(self.point_dict['y']), max(self.point_dict['y']))
             #self.save(data)
             
-            self.qu.put(data)
+            #Empty retrieval queue before putting data in (as long as main thread isn't putting stuff in simultaneously I think this should be fine since other threads are blocked until this thread finishes)
+            self.sendData(data)
             #print(data.state)
             self.save(data)
         print ("Exiting " + self.name)
