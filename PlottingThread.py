@@ -81,7 +81,7 @@ class PlottingThread_inline (threading.Thread):
             time.sleep(.1)
             
             self.qu.put(dmap_in)
-
+            time.sleep(1)
             if self.last_thread:
                 print(self.last_thread.threadID)
                 self.last_thread.join()
@@ -125,7 +125,7 @@ class PlottingThread_inline (threading.Thread):
     
     def run(self):
    
-        print("Starting " + self.name)
+        #print("Starting " + self.name)
         #time.sleep(.1)
         warnings.filterwarnings("ignore", message="All-NaN slice encountered\n drange = (np.nanmin(data), np.nanmax(data))")
         img = self.simulate_measure_inline()
@@ -138,7 +138,7 @@ class PlottingThread_inline (threading.Thread):
             self.sendData(data)
             #print(data.state)
             self.save(data)
-        print ("Exiting " + self.name)
+        #print ("Exiting " + self.name)
         return img
     
     def stop(self):

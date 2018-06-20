@@ -36,6 +36,9 @@ class GUI(threading.Thread):
         def timertick():
             try: 
                 loc, value = self.request_queue.get_nowait()
+                
+                #display_label = self.label_dict[loc[0]][loc[1]]
+                #display_label.config(text='%s' % (value,))
             except queue.Empty:
                 pass
             else:
@@ -157,12 +160,16 @@ class Overview():
         self.plot_thread.start()
             #plot_thread.start()
         #time.sleep(1)
-        print(self.plot_thread.isAlive())
+        #print(self.plot_thread.isAlive())
             #plot_thread.join()
             
+        #time.sleep(.1)
         #Using .get instead of no wait because .get blocks until it actually gtes an object
         img = self.q.get()
         #self.plot_thread.join() #Temporary, used to see this plots full outputs
+        #time.sleep(.1)
+        #print(img)
+        #hv.ipython.display(img)
         return img
 
     def get_plot(self):
