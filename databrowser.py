@@ -58,6 +58,33 @@ def loadnum(number):
 
 def query(comment):
     """Returns table of all data that contains the input comment"""
-    return
+    pd.set_option('display.max_colwidth', -1)
+    
+    datafiles = glob.glob('*.p')
+    #print(datafiles)
+    data_table = {'Date': [], 'Description': [], 'Comment': [], 'Thumbnail': []}
+    for file in datafiles:
+        try:
+            data = _load(file)
+            data_table['Date'].append(data.date)
+            data_table['Description'].append(data.description)
+            if data.comment:
+                data_table['Comment'].append(data.comment)
+            else:
+                data_table['Comment'].append('')
+            
+            thumbnail_file = './DataThumbnails/' +file[:-1] +'png' 
+            if os.path.isfile(thumbnail_file):
+                data_table['Thumbnail'].append('<img src="%s" height="50" width="50"/>' % (thumbnail_file,))
+            else:
+                data_table['Thumbnail'].append('')
+                
+        except EOFError:
+            pass
+    #print(data_table['Thumbnail'])
+    data_df = pd.DataFrame(data = data_table)
+    data_df = data_df[['Date', 'Description', 'Comment', 'Thumbnail']]
+    data_df_queried = data_df.loc[data_df.loc[:,'Comment'].str.contains(comment)]
+    return HTML(data_df_queried.to_html(escape=False))
     
 

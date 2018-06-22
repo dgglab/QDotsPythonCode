@@ -11,6 +11,7 @@ import qdevil_code as qdc
 import PlottingThread
 import pickle
 import ipywidgets as widgets
+import param
 
 class GUI(threading.Thread):
     #Tkinter class for background updating of instrument values
