@@ -5,6 +5,7 @@ import pandas as pd
 class QDevil:
     qdevil= 1
     channel_mapping = {}
+    _defaultMapping = {'qdac%s' % (n,):n for n in range(1,49)}
     location = '/dev/ttyUSB0'
     #voltage_list = np.zeros(48)
     voltage_dict = {n: 0 for n in range(1,49)}
@@ -36,7 +37,7 @@ class QDevil:
  
         if self._nameExist(name):
             if override:
-                print("Overriding %s = Channel %s to %s = Channel %s" % (name, self.channel_mapping[name], name, channel))
+                print("Overriding %s = Channel %s to %s = Channel %s" % (name, self._getChannel[name], name, channel))
                 self.channel_mapping[name] = channel
                 return
             else:
@@ -70,7 +71,11 @@ class QDevil:
     
     def _getChannel(self, name):
         if self._nameExist(name):
-            return self.channel_mapping[name]
+            try:
+                return self.channel_mapping[name]
+            except KeyError:
+                return self._defaultMapping[name]
+        
         else:
             raise Exception("No channel with the name %s exists!" % (name,))
             
@@ -89,7 +94,7 @@ class QDevil:
         #    return True
         #else:
         #    return False
-        return name in self.channel_mapping.keys()
+        return (name in self.channel_mapping.keys()) or (name in self._defaultMapping.keys())
     
     def _channelExist(self,channel):
         if type(channel) != int:
@@ -144,12 +149,14 @@ class QDevil:
     
 class Measurements:
     qdevil= QDevil()
-    channel_mapping = {}
-    location = '/dev/ttyUSB0'
+    instrumentList = []
     voltage_list = np.zeros(48)
     
     def add_instrument(self, instrument):
         self.inst = instrument #obviously not correct, will need to correctly handle different instruments and how to call
+        
+    def _parseInstrument(self, input_channel):
+        return
     
     def ramp(self, instrument, value):
         return
@@ -158,7 +165,22 @@ class Measurements:
     def sweep(self):
         return
     
-    def sweep2D(self):
+    def sweep2D(self, chan1, start1, end1, steps1, chan2, start2, end2, steps2):
+        inst1 = self._getInstrument(chan1)
+        inst2 = self._getInstrument(chan2)
+        
+        
+        return
+    
+    def _getInstrument(self, channel):
+        """Returns the instrument that corresponds to a given channel"""
+        for instrument in instrumentList:
+            if instrument._nameExist(channel):
+                return instrument
+        raise Exception('No instrument contains the channel name %s exists' % (channel,))
+        
+    
+    def _nameChannel(self, instrument, channel):
         return
     
     
