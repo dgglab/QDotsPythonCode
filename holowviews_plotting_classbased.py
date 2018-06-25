@@ -172,6 +172,46 @@ class Overview():
         #print(img)
         #hv.ipython.display(img)
         return img
+    
+    def sweep(self, start, stop, num):
+        self.q = queue.Queue()
+
+        #x_data = np.arange(start1, stop1, spacing1)
+        #y_data = np.arange(start2, stop2, spacing2)
+        
+        #Use linspace to include end points in interval and give # of points instead of step
+            #Add one to number of steps for convenience. For example if you want interval [0,3] with step sizes of 1, the number of steps is 4 but now can input (3-0)/1 = 3 and get desired output 
+        x_data = np.linspace(start, stop, num+1)
+        #y_data = np.linspace(start2, stop2, num2+1)
+        points = {"x": x_data, "y":np.full(len(x_data), np.nan)}
+
+        #initially check self.plot_thread instead of isAlive because plot_thread is initalized to None since a thread doesn't exist yet
+        if self.plot_thread and self.plot_thread.isAlive():
+            self.plot_thread = PlottingThread.PlottingThread_inline(self.thread_count, "Thread %s" % (self.thread_count,), points, self.q, self.retrieval_queue, self.gui, self._qdac, self.plot_thread)
+        else:
+            self.plot_thread = PlottingThread.PlottingThread_inline(self.thread_count, "Thread %s" % (self.thread_count,), points, self.q, self.retrieval_queue, self.gui, self._qdac)
+        
+        self.thread_count += 1
+        self.plot_thread.start()
+            #plot_thread.start()
+        #time.sleep(1)
+        #print(self.plot_thread.isAlive())
+            #plot_thread.join()
+            
+        #time.sleep(.1)
+        #Using .get instead of no wait because .get blocks until it actually gtes an object
+        img = self.q.get()
+        #self.plot_thread.join() #Temporary, used to see this plots full outputs
+        #time.sleep(.1)
+        #print(img)
+        #hv.ipython.display(img)
+        return img
+    
+    def addPlot(self, data, start1, stop1, num1):
+        prev_plot = data.plot
+        plot = self.sweep(start1, stop1, num1)
+        return prev_plot*plot
+        
 
     def get_plot(self):
         try:
