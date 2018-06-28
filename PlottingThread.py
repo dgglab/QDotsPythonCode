@@ -64,9 +64,9 @@ class PlottingThread_inline (threading.Thread):
         return saveClass.savedData(result, curr_state, name, self._sweepDescription)
     
     
-    def simulate_measure_inline(self):#,point_dict):
-        #nonlocal dmap_in
-        #global plot_thread
+    def simulate_measure_inline(self):
+        
+        #This is just to ignore the warning that holoviews outputs when data is initialized to all nan
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", message="All-NaN slice encountered")
 
@@ -153,6 +153,7 @@ class PlottingThread_inline (threading.Thread):
         
         
     def sendData(self, data):
+        """Put data into queue as only object, by first repeatedly pulling from queue until empty. Want queue to be empty because user may not always retrieve from queue after every sweep, and expected behavior is that retrieving from queue should get the latest sweep"""
         while(1):
             try:
                 self.retrieval_queue.get_nowait()
@@ -161,9 +162,9 @@ class PlottingThread_inline (threading.Thread):
         self.retrieval_queue.put(data)
     
     def run(self):
-   
+        """This defines what the thread does when started. First starts the measurement function which returns the finished plot, puts it into the savedData object, and puts the object in the queue for the main thread to retrieve. Finally it saves the object into a pickle format to be read earlier."""
         #print("Starting " + self.name)
-        #time.sleep(.1)
+        
         warnings.filterwarnings("ignore", message="All-NaN slice encountered\n drange = (np.nanmin(data), np.nanmax(data))")
         img = self.simulate_measure_inline()
 

@@ -2,62 +2,57 @@ import qdac
 import numpy as np
 import pandas as pd
 
-class QDevil:
-    qdevil= 1
-    channel_mapping = {}
-    _defaultMapping = {'qdac%s' % (n,):n for n in range(1,49)}
+class qdacChannel:
+    voltage = 0
+    def __init__(self, qdac, number):
+        self.qdacInst = qdac
+        self.number = number
+    
+    def __repr__(self):
+        return 'QDAC Channel %s' % (number,)
+    
+    def ramp(self, voltage):
+        self.qdacInst.setDCVoltage(channel = number, volts = voltage)
+        self.voltage = voltage
+
+class qdacWrapper:
     location = '/dev/ttyUSB0'
+    qdacInst= 1
+    _name = 'qdac'
+    channel_mapping = {'qdac%s' % (n,):qdacChannel(qdacInst, number) for n in range(1,49)}
+    #_defaultMapping = {'qdac%s' % (n,):qdacChannel(qdacInst, number) for n in range(1,49)}
     #voltage_list = np.zeros(48)
+    
     voltage_dict = {n: 0 for n in range(1,49)}
     
-    def _nameGate(self, name, channel, override=False):
+    
+    def _nameGate(self, name, channel):
         if type(name) != str:
             raise Exception("Please use a string for channel name")
         
         if type(channel) != int or not (1 <= channel <= 48):
             raise Exception("Please use an integer 1-48 for channel number")
-            
-        if self._channelExist(channel):
-            chan_name = self._getName(channel)
-            
-            if not override:
-                #Check whether Channel already used and Name already use to give more informative Error
-                if self._nameExist(name):
-                    raise Exception("Channel %s already exists as %s and %s exists as Channel %s. Set override to True to change." % (channel, chan_name, name, self._getChannel(name)))
-                raise Exception("Channel %s already exists as Channel %s! Set override to True to change." % (chan_name, channel))
-                
-            if self._nameExist(name):
-                print("Overriding %s = Channel %s and %s = Channel %s to %s = Channel %s" % (chan_name, channel, name, self._getChannel(name), name,channel))
-            else:
-                print("Overriding %s = Channel %s to %s = Channel %s" % (chan_name, channel, name, channel))
-                
-            self.channel_mapping.pop(chan_name) #Deletes old entry for name that corresponded to given channel
-            self.channel_mapping[name] = channel
-            return
- 
-        if self._nameExist(name):
-            if override:
-                print("Overriding %s = Channel %s to %s = Channel %s" % (name, self._getChannel[name], name, channel))
-                self.channel_mapping[name] = channel
-                return
-            else:
-                raise Exception("Channel %s already exists as Channel %s! Set override to True to change." % (name,self.channel_mapping[name]))
         
-        self.channel_mapping[name] = channel
+        
+        chan_name = self._getName(channel)
+        print("Overriding %s = Channel %s to %s = Channel %s" % (chan_name, channel, name, channel))
+        
+        self.channel_mapping[name] = self.channel_mapping.pop(chan_name) #Deletes old entry for name that corresponded to given channel
         return
-    
+        
+        
     def _ramp(self, channels, voltages):
         """Ramp selected channels to the given voltages. Input can be the Name or number of the channel and can also be given as an array"""
         #Name can be the name given to the channel or the actual channel number itself
         if type(channels) in {np.ndarray, list, tuple}:
             if len(channels) != len(list(voltages)):
                 raise Exception("Different number of channels provided than voltages")
-        channels_list = self._convertChannels(channels) #Turns all channels input into array of integers that can be passed to QDevil
-        with qdac.qdac(self.location) as q:
-            for i in range(len(channels_list)):
-                q.setDCVoltage(channel=channels_list[i], volts = voltages[i])
-                #self.voltage_list[channels_list[i]-1] = voltages[i]
-                self.voltage_dict[channels_list[i]] = voltages[i]
+        channels_list = self._convertChannels(channels) #Turns all channels input into array of integers that can be passed to QDAC
+        #with qdac.qdac(self.location) as q:
+        for i in range(len(channels_list)):
+            qdacInst.setDCVoltage(channel=channels_list[i], volts = voltages[i])
+            #self.voltage_list[channels_list[i]-1] = voltages[i]
+            self.voltage_dict[channels_list[i]] = voltages[i]
         return
         
         
@@ -71,10 +66,7 @@ class QDevil:
     
     def _getChannel(self, name):
         if self._nameExist(name):
-            try:
-                return self.channel_mapping[name]
-            except KeyError:
-                return self._defaultMapping[name]
+            return self.channel_mapping[name]
         
         else:
             raise Exception("No channel with the name %s exists!" % (name,))
@@ -82,7 +74,7 @@ class QDevil:
     def _getName(self, channel):
         if self._channelExist(channel):
             for _name, _channel in self.channel_mapping.items():
-                if _channel == channel:
+                if _channel == channel.number:
                     return _name
         else:
             raise Exception("Channel %s has not been assigned a name!" % (channel,))
@@ -94,7 +86,7 @@ class QDevil:
         #    return True
         #else:
         #    return False
-        return (name in self.channel_mapping.keys()) or (name in self._defaultMapping.keys())
+        return (name in self.channel_mapping.keys())
     
     def _channelExist(self,channel):
         if type(channel) != int:
@@ -148,17 +140,22 @@ class QDevil:
     
     
 class Measurements:
-    qdevil= QDevil()
-    instrumentList = []
+    #qdevil= QDevil()
+    instrumentList = {}
     voltage_list = np.zeros(48)
     
     def add_instrument(self, instrument):
         self.inst = instrument #obviously not correct, will need to correctly handle different instruments and how to call
+        self.instrumentList[instrument._name] = instrument
+            
+        #Check names of every instrument so that there is no overlap
         
     def _parseInstrument(self, input_channel):
         return
     
-    def ramp(self, instrument, value):
+    def ramp(self, channels, values):
+        instrument = self._getInstrument(channel)
+        instrument.ramp(value)
         return
         
         
@@ -173,14 +170,72 @@ class Measurements:
         return
     
     def _getInstrument(self, channel):
-        """Returns the instrument that corresponds to a given channel"""
-        for instrument in instrumentList:
-            if instrument._nameExist(channel):
-                return instrument
-        raise Exception('No instrument contains the channel name %s exists' % (channel,))
+        """Returns the instrument that corresponds to a given name"""
+        for name in self.instrumentList:
+            instrument = self.instrumentList[name]
+            try:
+                if name == channel:
+                    return instrument
+                
+                if instrument._multiChannel:
+                    if instrument._nameExist(channel):
+                        return instrument._getChannel(channel)
+            except AttributeError:
+                pass
+
+                    
+
+        raise Exception('No instrument with the name %s exists' % (channel,))
+      
+    @property
+    def InstrumentNames(self):
+        names_dict = {}
+        for name in self.instrumentList:
+            instrument = self.instrumentList[name]
+            if instrument._multiChannel:
+                names_dict[name] = instrument.channel_mapping
+            else:
+                names_dict[name] = instrument
+        return names_dict
+    
+    @property
+    def _InstrumentNamesList(self):
+        names = []
+        for name in self.instrumentList:
+            names.append(name)
+            instrument = self.instrumentList[name]
+            if hasattr(instrument, '_multiChannel'):
+                names.append(instrument.channel_mapping.keys())
+        return names
+        
         
     
-    def _nameChannel(self, instrument, channel):
+    def nameInstrument(self, instrument, name, channel = False):
+        """Rename an instrument. The inputs should be instrument, name= 'New name', channel = channel number"""
+        #instrument = self._getInstrument(instrument_name)
+        #instrument = instrumentList[instrument_name]
+        #if instrument._multiChannel:
+            #if not channel:
+                #raise Exception('Instrument contains multiple channels, please provide a channel number as defined in that instrument class')
+            #else:
+                #instrument._nameGate(name, channel, override = True)
+                
+        #else:
+            #instrument._name = name
+        
+        #Check if name alreday taken
+        if name in self._InstrumentNamesList:
+            raise Exception('Name already taken by %s' % (self._getInstrument(name)))
+        
+        try:
+            if instrument._multiChannel:
+                if not channel:
+                    raise Exception('Instrument contains multiple channels, please provide a channel number as defined in that instrument class')
+                instrument._nameGate(name, channel)
+                return
+        except AttributeError:
+            pass
+        instrumentList[name] = instrument
+        instrument._name = name
+        
         return
-    
-    
