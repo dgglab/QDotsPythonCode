@@ -1,12 +1,15 @@
 import qdac
 import numpy as np
 import pandas as pd
+from gui import GUI
 
 class qdacChannel:
     voltage = 0
-    def __init__(self, qdac, number):
+    def __init__(self, qdac, number, gui, name):
         self.qdacInst = qdac
         self.number = number
+        self.guiDisplay = gui
+        self._name = name
     
     def __repr__(self):
         return 'QDAC Channel %s' % (number,)
@@ -14,17 +17,30 @@ class qdacChannel:
     def ramp(self, voltage):
         self.qdacInst.setDCVoltage(channel = number, volts = voltage)
         self.voltage = voltage
+        
+        #Location of gui is (channel #, 2) -- 2 is for column of voltages
+        self.display_voltage([self.number, 2], voltage)
+        return
 
+        
+    def display_voltage(self, loc, value):
+        """Send voltage to Tkinter table to be displayed"""
+        self.guiDisplay.submit_to_tkinter(loc, np.round(value,6))
+        return
+    
 class qdacWrapper:
     location = '/dev/ttyUSB0'
     qdacInst= 1
     _name = 'qdac'
-    channel_mapping = {'qdac%s' % (n,):qdacChannel(qdacInst, number) for n in range(1,49)}
+    
+    guiDisplay = GUI()
+    guiDisplay.start()
+    
+    channel_mapping = {'qdac%s' % (n,):qdacChannel(qdacInst, n, guiDisplay, 'qdac%s' % (n,)) for n in range(1,49)}
     #_defaultMapping = {'qdac%s' % (n,):qdacChannel(qdacInst, number) for n in range(1,49)}
     #voltage_list = np.zeros(48)
     
     voltage_dict = {n: 0 for n in range(1,49)}
-    
     
     def _nameGate(self, name, channel):
         if type(name) != str:
@@ -38,6 +54,13 @@ class qdacWrapper:
         print("Overriding %s = Channel %s to %s = Channel %s" % (chan_name, channel, name, channel))
         
         self.channel_mapping[name] = self.channel_mapping.pop(chan_name) #Deletes old entry for name that corresponded to given channel
+        self.channel_mapping[name]._name = name
+        
+        #Send updated name to GUI
+        number = self.channel_mapping[name].number
+        #Location is (number, 1) -- 1 is for the column of names
+        loc = [number, 1]
+        self.guiDisplay.update_name(loc, name)
         return
         
         
@@ -138,104 +161,4 @@ class qdacWrapper:
         
             
     
-    
-class Measurements:
-    #qdevil= QDevil()
-    instrumentList = {}
-    voltage_list = np.zeros(48)
-    
-    def add_instrument(self, instrument):
-        self.inst = instrument #obviously not correct, will need to correctly handle different instruments and how to call
-        self.instrumentList[instrument._name] = instrument
-            
-        #Check names of every instrument so that there is no overlap
-        
-    def _parseInstrument(self, input_channel):
-        return
-    
-    def ramp(self, channels, values):
-        instrument = self._getInstrument(channel)
-        instrument.ramp(value)
-        return
-        
-        
-    def sweep(self):
-        return
-    
-    def sweep2D(self, chan1, start1, end1, steps1, chan2, start2, end2, steps2):
-        inst1 = self._getInstrument(chan1)
-        inst2 = self._getInstrument(chan2)
-        
-        
-        return
-    
-    def _getInstrument(self, channel):
-        """Returns the instrument that corresponds to a given name"""
-        for name in self.instrumentList:
-            instrument = self.instrumentList[name]
-            try:
-                if name == channel:
-                    return instrument
-                
-                if instrument._multiChannel:
-                    if instrument._nameExist(channel):
-                        return instrument._getChannel(channel)
-            except AttributeError:
-                pass
 
-                    
-
-        raise Exception('No instrument with the name %s exists' % (channel,))
-      
-    @property
-    def InstrumentNames(self):
-        names_dict = {}
-        for name in self.instrumentList:
-            instrument = self.instrumentList[name]
-            if instrument._multiChannel:
-                names_dict[name] = instrument.channel_mapping
-            else:
-                names_dict[name] = instrument
-        return names_dict
-    
-    @property
-    def _InstrumentNamesList(self):
-        names = []
-        for name in self.instrumentList:
-            names.append(name)
-            instrument = self.instrumentList[name]
-            if hasattr(instrument, '_multiChannel'):
-                names.append(instrument.channel_mapping.keys())
-        return names
-        
-        
-    
-    def nameInstrument(self, instrument, name, channel = False):
-        """Rename an instrument. The inputs should be instrument, name= 'New name', channel = channel number"""
-        #instrument = self._getInstrument(instrument_name)
-        #instrument = instrumentList[instrument_name]
-        #if instrument._multiChannel:
-            #if not channel:
-                #raise Exception('Instrument contains multiple channels, please provide a channel number as defined in that instrument class')
-            #else:
-                #instrument._nameGate(name, channel, override = True)
-                
-        #else:
-            #instrument._name = name
-        
-        #Check if name alreday taken
-        if name in self._InstrumentNamesList:
-            raise Exception('Name already taken by %s' % (self._getInstrument(name)))
-        
-        try:
-            if instrument._multiChannel:
-                if not channel:
-                    raise Exception('Instrument contains multiple channels, please provide a channel number as defined in that instrument class')
-                instrument._nameGate(name, channel)
-                return
-        except AttributeError:
-            pass
-        instrumentList[name] = instrument
-        instrument._name = name
-        
-        return

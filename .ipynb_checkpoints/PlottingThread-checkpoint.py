@@ -63,6 +63,13 @@ class PlottingThread_inline (threading.Thread):
 
         return saveClass.savedData(result, curr_state, name, self._sweepDescription)
     
+    def save(self, savedData):
+        """Input is the savedData object that is returned from a sweep."""
+        save_name = savedData.name
+        with open('%s.p' % (save_name,), 'wb') as file:
+            pickle.dump(savedData, file)
+        hv.renderer('bokeh').save(savedData.plot.options(toolbar=None), './DataThumbnails/%s' % (save_name,), fmt='png')
+        return
     
     def simulate_measure_inline(self):
         
