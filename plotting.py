@@ -11,7 +11,7 @@ import numpy as np
 
 class PlottingThread(threading.Thread):
    
-    def __init__(self, threadID, name, points, dataQueue, retrQueue, instrument1, measurementInstrument, instrument2 = None, lthread = None):
+    def __init__(self, threadID, name, points, dataQueue, retrQueue, instrument1, measurementInstrument, currentState =None, instrument2 = None, lthread = None):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.name = name
@@ -25,6 +25,7 @@ class PlottingThread(threading.Thread):
         self.measInst = measurementInstrument
         self.retrieval_queue = retrQueue
         self.sweep2D = False
+        self.currentState = currentState
     
     @property
     def _sweepDescription(self):
@@ -37,6 +38,9 @@ class PlottingThread(threading.Thread):
     def display_voltage(self, loc, value):
         """Send voltage to Tkinter table to be displayed"""
         self.gui.submit_to_tkinter(loc, np.round(value,6))
+        return
+    
+    def savegen(self):
         return
     
     def save2D(self,result, channel1, start1, stop1, channel2, start2,stop2):
@@ -83,16 +87,22 @@ class PlottingThread(threading.Thread):
             if self.inst2:
                 self.sweep2D = True
                 y_data = self.point_dict[self.inst2._name]
-            measurementData = self.point_dict[self.measInst._name]
-            
+            #for inst in self.measInst:
+            #    pass
+            #measurementData = self.point_dict[self.measInst._name]
             
             
             #This defines how to update the Holoviews DynamicMap. Essentially the DynamicMap works through streams where some function can stream data into the plot. Since here we are just updating the data displayed, this function just returns a plot of the current data.
             def update_fn():
                 if self.sweep2D:
-                    dispsq = hv.Image((x_data, y_data, measurementData), kdims = [self.inst1._name, self.inst2._name], vdims = self.measInst._name).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
+                    dispsq = hv.Image((x_data, y_data, self.point_dict[self.measInst[0]._name]), kdims = [self.inst1._name, self.inst2._name], vdims = self.measInst[0]._name).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
+                    for i in range(1,len(self.measInst)):
+                        dispsq += hv.Image((x_data, y_data, self.point_dict[self.measInst[i]._name]), kdims = [self.inst1._name, self.inst2._name], vdims = self.measInst[i]._name).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
+                    #dispsq = hv.Image((x_data, y_data, measurementData), kdims = [self.inst1._name, self.inst2._name], vdims = self.measInst._name).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
                 else:
-                    dispsq = hv.Curve((x_data, measurementData), kdims = self.inst1._name, vdims = self.measInst._name).opts(norm=dict(framewise=True))
+                    dispsq = hv.Curve((x_data, self.point_dict[self.measInst[0]._name]), kdims = self.inst1._name, vdims = self.measInst[0]._name).opts(norm=dict(framewise=True)).options(color=hv.Cycle('Colorblind').values[0])
+                    for i in range(1, len(self.measInst)):
+                        dispsq += hv.Curve((x_data, self.point_dict[self.measInst[i]._name]), kdims = self.inst1._name, vdims = self.measInst[i]._name).opts(norm=dict(framewise=True)).options(color = hv.Cycle('Colorblind').values[i])
                 return dispsq
             dmap = hv.DynamicMap(update_fn, streams=[hv.streams.Stream.define("Dummy")()])
             
@@ -111,7 +121,7 @@ class PlottingThread(threading.Thread):
                     self.inst1.ramp(x_data[i])
                     for j in range(len(y_data)):
                         if self.stopflag:
-                            if not np.isnan(measurementData).all():
+                            if not np.isnan(self.point_dict[self.measInst[0]._name]).all():
                                 #create another copy of the image because dynamic map object now exists in main thread
                                 #img = hv.Image((x_data, y_data, measurementData)).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
                                 img = update_fn()
@@ -130,7 +140,9 @@ class PlottingThread(threading.Thread):
                         self.inst2.ramp(y_data[j])
                         time.sleep(.1)
                         
-                        measurementData[j,i] = self.measInst.measure()
+                        for inst in self.measInst:
+                            self.point_dict[inst._name][j,i] = inst.measure()
+                        #measurementData[j,i] = self.measInst.measure()
                         
                         
                         #Update DynamicMap with updated data
@@ -144,7 +156,7 @@ class PlottingThread(threading.Thread):
                 for i in range(len(x_data)):
                     self.inst1.ramp(x_data[i])
                     if self.stopflag:
-                        if not np.isnan(measurementData).all():
+                        if not np.isnan(self.point_dict[self.measInst[0]._name]).all():
                                 #create another copy of the image because dynamic map object now exists in main thread
                             #img = hv.Curve((x_data, measurementData)).opts(norm=dict(framewise=True))
                             img = update_fn()
@@ -160,7 +172,9 @@ class PlottingThread(threading.Thread):
                         self.get_plot = False
                     time.sleep(.1)
                     
-                    measurementData[i] = self.measInst.measure()
+                    for inst in self.measInst:
+                        self.point_dict[inst._name][i] = inst.measure()
+                    #measurementData[i] = self.measInst.measure()
                     
                     dmap.event()
                     
@@ -168,92 +182,7 @@ class PlottingThread(threading.Thread):
                 img = update_fn()
                 return img
             
-    def simulate_measure_inline(self):
-        
-        #This is just to ignore the warning that holoviews outputs when data is initialized to all nan
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", message="All-NaN slice encountered")
-
-            x_data = self.point_dict['x']
-            y_data = self.point_dict['y']
-            if 'z' in self.point_dict:
-                self.sweep2D = True
-            
-
-            def update_fn_in():
-                if self.sweep2D:
-                    dispsq = hv.Image((self.point_dict["x"], self.point_dict["y"], self.point_dict["z"])).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
-                else:
-                    dispsq = hv.Curve((self.point_dict["x"], self.point_dict["y"])).opts(norm=dict(framewise=True))
-                return dispsq
-            dmap_in = hv.DynamicMap(update_fn_in, streams=[hv.streams.Stream.define("Dummy")()])
-            
-            time.sleep(.1)
-            
-            self.qu.put(dmap_in)
-            time.sleep(1)
-            if self.last_thread:
-                print(self.last_thread.threadID)
-                self.last_thread.join()
-            
-            if self.sweep2D:
-                for i in range(len(x_data)):
-
-                    for j in range(len(y_data)):
-                        if self.stopflag:
-                            if not np.isnan(self.point_dict['z']).all():
-                                #create another copy of the image because dynamic map object now exists in main thread
-                                img = hv.Image((self.point_dict["x"], self.point_dict["y"], self.point_dict["z"])).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
-
-                                return img
-                            return
-                        if self.get_plot:
-                            #Used to get plot while its running
-                            img = hv.Image((self.point_dict["x"], self.point_dict["y"], self.point_dict["z"])).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
-                            data = self.save2D(img,1, min(self.point_dict['x']), max(self.point_dict['x']), 2, min(self.point_dict['y']), max(self.point_dict['y']))
-                            #self.qu.put(img)
-                            self.sendData(data)
-                            self.get_plot = False
-                        time.sleep(.1)
-                        #points['z'][i,j] =points['x'][i]**2+points['y'][j]**2
-                        self.point_dict['z'][j,i] = self.point_dict['x'][i]+self.point_dict['y'][j]
-                        #print('g')
-
-                        #Push value to tkinter (voltage table) Format is [channel #, 2]; column order is channel # (0), name (1), voltage (2)
-                        self.display_voltage([1,2], self.point_dict['x'][i])
-                        self.display_voltage([2,2], self.point_dict['y'][j])
-                        dmap_in.event()
-                        #print('h')
-                img = hv.Image((self.point_dict["x"], self.point_dict["y"], self.point_dict["z"])).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
-                return img
-            
-            else:
-                for i in range(len(x_data)):
-                    if self.stopflag:
-                        if not np.isnan(self.point_dict['y']).all():
-                                #create another copy of the image because dynamic map object now exists in main thread
-                            img = hv.Curve((self.point_dict["x"], self.point_dict["y"])).opts(norm=dict(framewise=True))
-
-                            return img
-                        return
-                    if self.get_plot:
-                        #Used to get plot while its running
-                        img = hv.Curve((self.point_dict["x"], self.point_dict["y"])).opts(norm=dict(framewise=True))
-                        data = self.save1D(img,1, min(self.point_dict['x']), max(self.point_dict['x']))
-                            #self.qu.put(img)
-                        self.sendData(data)
-                        self.get_plot = False
-                    time.sleep(.1)
-                    #points['z'][i,j] =points['x'][i]**2+points['y'][j]**2
-                    self.point_dict['y'][i] = self.point_dict['x'][i]**2
-                    
-
-                    #Push value to tkinter (voltage table) Format is [channel #, 2]; column order is channel # (0), name (1), voltage (2)
-                    self.display_voltage([1,2], self.point_dict['x'][i])
-                    dmap_in.event()
-                        #print('h')
-                img = hv.Curve((self.point_dict["x"], self.point_dict["y"])).opts(norm=dict(framewise=True))
-                return img
+    
         
         
     def sendData(self, data):
@@ -305,7 +234,6 @@ class PlottingOverview():
     retrieval_queue = queue.Queue()
     
     
-    points = {"x": [], "y": [], "z": np.array([])}
     thread_count = 0
     #gui = GUI()
     #gui.start()
@@ -319,6 +247,7 @@ class PlottingOverview():
     def _sweep(self, inst1, measInst, points, inst2 = None):
         #create queue that data is passed through
         self.q = queue.Queue()
+        
         
         if self.plot_thread and self.plot_thread.isAlive():
             self.plot_thread = PlottingThread(self.thread_count, "Thread %s" % (self.thread_count,), points, self.q, self.retrieval_queue, instrument1 = inst1, instrument2 = inst2, measurementInstrument = measInst, last_thread = self.plot_thread)
@@ -337,77 +266,7 @@ class PlottingOverview():
         #hv.ipython.display(img)
         return img
 
-    def sweep2D(self,inst1, inst2, measInst, points):
-
-        #create queue that data is passed through
-        self.q = queue.Queue()
-
-        #x_data = np.arange(start1, stop1, spacing1)
-        #y_data = np.arange(start2, stop2, spacing2)
-        
-        #Use linspace to include end points in interval and give # of points instead of step
-            #Add one to number of steps for convenience. For example if you want interval [0,3] with step sizes of 1, the number of steps is 4 but now can input (3-0)/1 = 3 and get desired output 
-        #x_data = np.linspace(start1, stop1, num1+1)
-        #y_data = np.linspace(start2, stop2, num2+1)
-        #points2 = {"x": x_data, "y": y_data, "z":np.full((len(y_data),len(x_data)), np.nan)}
-
-        #initially check self.plot_thread instead of isAlive because plot_thread is initalized to None since a thread doesn't exist yet
-        #if self.plot_thread and self.plot_thread.isAlive():
-        #    self.plot_thread = PlottingThread.PlottingThread(self.thread_count, "Thread %s" % (self.thread_count,), points2, self.q, self.retrieval_queue, self.gui, self._qdac, self.plot_thread)
-        #else:
-        #    self.plot_thread = PlottingThread.PlottingThread(self.thread_count, "Thread %s" % (self.thread_count,), points2, self.q, self.retrieval_queue, self.gui, self._qdac)
-        
-        
-        if self.plot_thread and self.plot_thread.isAlive():
-            self.plot_thread = PlottingThread.PlottingThread(self.thread_count, "Thread %s" % (self.thread_count,), points, self.q, self.retrieval_queue, instrument1 = inst1, instrument2 = inst2, measurementInstrument = measInst, last_thread = self.plot_thread)
-        else:
-            self.plot_thread = PlottingThread.PlottingThread(self.thread_count, "Thread %s" % (self.thread_count,), points, self.q, self.retrieval_queue, instrument1 = inst1, instrument2 = inst2, measurementInstrument = measInst)
-        
-        self.thread_count += 1
-        self.plot_thread.start()
-            
-        #time.sleep(.1)
-        #Using .get instead of no wait because .get blocks until it actually gtes an object
-        img = self.q.get()
-        #self.plot_thread.join() #Temporary, used to see this plots full outputs
-        #time.sleep(.1)
-        #print(img)
-        #hv.ipython.display(img)
-        return img
-    
-    def sweep(self, start, stop, num):
-        self.q = queue.Queue()
-
-        #x_data = np.arange(start1, stop1, spacing1)
-        #y_data = np.arange(start2, stop2, spacing2)
-        
-        #Use linspace to include end points in interval and give # of points instead of step
-            #Add one to number of steps for convenience. For example if you want interval [0,3] with step sizes of 1, the number of steps is 4 but now can input (3-0)/1 = 3 and get desired output 
-        x_data = np.linspace(start, stop, num+1)
-        #y_data = np.linspace(start2, stop2, num2+1)
-        points = {"x": x_data, "y":np.full(len(x_data), np.nan)}
-
-        #initially check self.plot_thread instead of isAlive because plot_thread is initalized to None since a thread doesn't exist yet
-        if self.plot_thread and self.plot_thread.isAlive():
-            self.plot_thread = PlottingThread.PlottingThread(self.thread_count, "Thread %s" % (self.thread_count,), points, self.q, self.retrieval_queue, self.gui, self._qdac, self.plot_thread)
-        else:
-            self.plot_thread = PlottingThread.PlottingThread(self.thread_count, "Thread %s" % (self.thread_count,), points, self.q, self.retrieval_queue, self.gui, self._qdac)
-        
-        self.thread_count += 1
-        self.plot_thread.start()
-            #plot_thread.start()
-        #time.sleep(1)
-        #print(self.plot_thread.isAlive())
-            #plot_thread.join()
-            
-        #time.sleep(.1)
-        #Using .get instead of no wait because .get blocks until it actually gtes an object
-        img = self.q.get()
-        #self.plot_thread.join() #Temporary, used to see this plots full outputs
-        #time.sleep(.1)
-        #print(img)
-        #hv.ipython.display(img)
-        return img
+   
     
     def addPlot(self, data, start1, stop1, num1):
         prev_plot = data.plot

@@ -34,24 +34,30 @@ class Measurement:
             instruments[i].ramp(values[i])
         
         
-    def sweep(self, inst, start, end, steps, measurement):
-        inst = self._getInstrument(inst)
-        measInst = self._getInstrument(measurement)
+    def sweep(self, sweepInst, start, end, steps, measurement):
+        sweepInst = self._getInstrument(sweepInst)
+        #measInst = self._getInstrument(measurement)
+        measInsts = self._convertInstruments(measurement)
         
         x_data = np.linspace(start, end, steps+1)
-        points = {inst._name: x_data, measInst._name:np.full(len(x_data), np.nan)}
-        return self._plottingManager._sweep(inst1 = inst, measInst = measInst, points = points)
+        points = {sweepInst._name: x_data}#, measInst._name:np.full(len(x_data), np.nan)}
+        for inst in measInsts:
+            points[inst._name] = np.full(len(x_data), np.nan)
+        return self._plottingManager._sweep(inst1 = sweepInst, measInst = measInsts, points = points)
         
     
-    def sweep2D(self, inst1, start1, end1, steps1, inst2, start2, end2, steps2, measurement):
-        inst1 = self._getInstrument(inst1)
-        inst2 = self._getInstrument(inst2)
-        measInst = self._getInstrument(measurement)
+    def sweep2D(self, sweepInst1, start1, end1, steps1, sweepInst2, start2, end2, steps2, measurement):
+        sweepInst1 = self._getInstrument(sweepInst1)
+        sweepInst2 = self._getInstrument(sweepInst2)
+        #measInst = self._getInstrument(measurement)
+        measInsts = self._convertInstruments(measurement)
         
         x_data = np.linspace(start1, end1, steps1+1)
         y_data = np.linspace(start2, end2, steps2+1)
-        points = {inst1._name: x_data, inst2._name: y_data, measInst._name:np.full((len(y_data),len(x_data)), np.nan)}
-        return self._plottingManager._sweep(inst1, inst2= inst2, measInst = measInst,points = points)
+        points = {sweepInst1._name: x_data, sweepInst2._name: y_data}#, measInst._name:np.full((len(y_data),len(x_data)), np.nan)}
+        for inst in measInsts:
+            points[inst._name] = np.full((len(y_data), len(x_data)), np.nan)
+        return self._plottingManager._sweep(inst1 = sweepInst1, inst2= sweepInst2, measInst = measInsts,points = points)
         
     
     def _getInstrument(self, channel):
@@ -130,13 +136,16 @@ class Measurement:
         """Convert list of names of instruments or channels into a list of the respective objects"""
         input_type = type(channels)
         if input_type in {np.ndarray, list, tuple}:
-            if channels.size == 1:
+            if len(channels) == 1:
                 return self._getInstrument(channels[0])
             return np.append(self._getInstrument(channels[0]), self._convertInstruments(channels[1:]))
         else:
             return np.array([self._getInstrument(channels)])
         
+    @property
     def currentState(self):
-        for instrument in instrumentList.values():
-            pass
-        return
+        currState = {}
+        for instrument in self.instrumentList:
+            currState[instrument] = instrument.snapshot()
+        return currState
+    
