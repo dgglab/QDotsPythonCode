@@ -82,24 +82,24 @@ class PlottingThread(threading.Thread):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", message="All-NaN slice encountered")
             
-            x_data = self.point_dict[self.inst1._name]
+            x_data = self.point_dict[self.inst1.name]
             if self.inst2:
                 self.sweep2D = True
-                y_data = self.point_dict[self.inst2._name]
+                y_data = self.point_dict[self.inst2.name]
             
             
             
             #This defines how to update the Holoviews DynamicMap. Essentially the DynamicMap works through streams where some function can stream data into the plot. Since here we are just updating the data displayed, this function just returns a plot of the current data.
             def update_fn():
                 if self.sweep2D:
-                    dispsq = hv.Image((x_data, y_data, self.point_dict[self.measInst[0]._name]), kdims = [self.inst1._name, self.inst2._name], vdims = self.measInst[0]._name).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
+                    dispsq = hv.Image((x_data, y_data, self.point_dict[self.measInst[0].name]), kdims = [self.inst1.name, self.inst2.name], vdims = self.measInst[0].name).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
                     for i in range(1,len(self.measInst)):
-                        dispsq += hv.Image((x_data, y_data, self.point_dict[self.measInst[i]._name]), kdims = [self.inst1._name, self.inst2._name], vdims = self.measInst[i]._name).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
+                        dispsq += hv.Image((x_data, y_data, self.point_dict[self.measInst[i].name]), kdims = [self.inst1.name, self.inst2.name], vdims = self.measInst[i].name).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
                     
                 else:
-                    dispsq = hv.Curve((x_data, self.point_dict[self.measInst[0]._name]), kdims = self.inst1._name, vdims = self.measInst[0]._name).opts(norm=dict(framewise=True)).options(color=hv.Cycle('Colorblind').values[0])
+                    dispsq = hv.Curve((x_data, self.point_dict[self.measInst[0].name]), kdims = self.inst1.name, vdims = self.measInst[0].name).opts(norm=dict(framewise=True)).options(color=hv.Cycle('Colorblind').values[0])
                     for i in range(1, len(self.measInst)):
-                        dispsq += hv.Curve((x_data, self.point_dict[self.measInst[i]._name]), kdims = self.inst1._name, vdims = self.measInst[i]._name).opts(norm=dict(framewise=True)).options(color = hv.Cycle('Colorblind').values[i])
+                        dispsq += hv.Curve((x_data, self.point_dict[self.measInst[i].name]), kdims = self.inst1.name, vdims = self.measInst[i].name).opts(norm=dict(framewise=True)).options(color = hv.Cycle('Colorblind').values[i])
                 return dispsq
             dmap = hv.DynamicMap(update_fn, streams=[hv.streams.Stream.define("Dummy")()])
             
@@ -118,7 +118,7 @@ class PlottingThread(threading.Thread):
                     self.inst1.ramp(x_data[i])
                     for j in range(len(y_data)):
                         if self.stopflag:
-                            if not np.isnan(self.point_dict[self.measInst[0]._name]).all():
+                            if not np.isnan(self.point_dict[self.measInst[0].name]).all():
                                 #create another copy of the image because dynamic map object now exists in main thread
                                 img = update_fn()
 
@@ -138,7 +138,7 @@ class PlottingThread(threading.Thread):
                         time.sleep(.1)
                         
                         for inst in self.measInst:
-                            self.point_dict[inst._name][j,i] = inst.measure()
+                            self.point_dict[inst.name][j,i] = inst.measure()
                         
                         #Update DynamicMap with updated data
                         dmap.event()
@@ -151,7 +151,7 @@ class PlottingThread(threading.Thread):
                 for i in range(len(x_data)):
                     self.inst1.ramp(x_data[i])
                     if self.stopflag:
-                        if not np.isnan(self.point_dict[self.measInst[0]._name]).all():
+                        if not np.isnan(self.point_dict[self.measInst[0].name]).all():
                                 #create another copy of the image because dynamic map object now exists in main thread
                             
                             img = update_fn()
@@ -168,7 +168,7 @@ class PlottingThread(threading.Thread):
                     time.sleep(.1)
                     
                     for inst in self.measInst:
-                        self.point_dict[inst._name][i] = inst.measure()
+                        self.point_dict[inst.name][i] = inst.measure()
                     #measurementData[i] = self.measInst.measure()
                     
                     dmap.event()
@@ -197,11 +197,11 @@ class PlottingThread(threading.Thread):
         img = self.measure()
         
         
-        #x_data = self.point_dict[self.inst1._name]
+        #x_data = self.point_dict[self.inst1.name]
         #xmin = min(x_data)
         #xmax = max(x_data)
         #if self.inst2:
-        #    y_data = self.point_dict[self.inst2._name]
+        #    y_data = self.point_dict[self.inst2.name]
         #    ymin = min(y_data)
         #    ymax = max(y_data)
         #if img:

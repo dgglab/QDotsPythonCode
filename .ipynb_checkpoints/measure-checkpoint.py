@@ -9,8 +9,8 @@ class Measurement:
         self.instrumentList = {}
     
     def addInstrument(self, instrument):
-        if instrument._name in self._InstrumentNamesList:
-            raise Exception('Instrument name %s already exists as another Instrument or Channel name' % (instrument._name,))
+        if instrument.name in self._InstrumentNamesList:
+            raise Exception('Instrument name %s already exists as another Instrument or Channel name' % (instrument.name,))
             
         try:
             if instrument._multiChannel:
@@ -20,7 +20,7 @@ class Measurement:
                         
         except AttributeError:
             pass
-        self.instrumentList[instrument._name] = instrument
+        self.instrumentList[instrument.name] = instrument
         return
     
     def ramp(self, instruments, values):
@@ -39,10 +39,10 @@ class Measurement:
         measInsts = self._convertInstruments(measurement)
         
         x_data = np.linspace(start, end, steps+1)
-        points = {sweepInst._name: x_data}
+        points = {sweepInst.name: x_data}
         
         for inst in measInsts:
-            points[inst._name] = np.full(len(x_data), np.nan)
+            points[inst.name] = np.full(len(x_data), np.nan)
             
         return self._plottingManager._sweep(inst1 = sweepInst, measInst = measInsts, points = points, currState = self.currentState)
         
@@ -55,10 +55,10 @@ class Measurement:
         
         x_data = np.linspace(start1, end1, steps1+1)
         y_data = np.linspace(start2, end2, steps2+1)
-        points = {sweepInst1._name: x_data, sweepInst2._name: y_data}
+        points = {sweepInst1.name: x_data, sweepInst2.name: y_data}
         
         for inst in measInsts:
-            points[inst._name] = np.full((len(y_data), len(x_data)), np.nan)
+            points[inst.name] = np.full((len(y_data), len(x_data)), np.nan)
             
         return self._plottingManager._sweep(inst1 = sweepInst1, inst2= sweepInst2, measInst = measInsts, points = points, currState = self.currentState)
         
@@ -117,27 +117,32 @@ class Measurement:
             instrument = self.instrumentList[name]
             if hasattr(instrument, '_multiChannel'):
                 if instrument._multiChannel:
-                    names.append(instrument.channel_mapping.keys())
+                    names.extend(list(instrument.channel_mapping.keys()))
         return names
         
         
     
-    def nameInstrument(self, instrument, name, channel = False):
-        """Rename an instrument. The inputs should be instrument, name= 'New name', channel = channel number (if instrument has multiple channels)"""
+    def nameInstrument(self, currInstName, name):
+        """Rename an instrument. The inputs should be current instrument name, name= 'New name'"""
+        if type(name) != str:
+            raise Exception("Please use a string for channel name")
+        
+        #Check if currInstName valid
+        if currInstName not in self._InstrumentNamesList:
+            raise Exception('No Instrument or Channel with name %s exists' % (currInstName))
+        
         #Check if name already taken
         if name in self._InstrumentNamesList:
             raise Exception('Name already taken by %s' % (self._getInstrument(name)))
+        instrument = self._getInstrument(currInstName)
         
+        #Replace instrument name in instrumentList (if this is a channel of an instrument, ie QDAC, then the instrument itself handles naming)
         try:
-            if instrument._multiChannel:
-                if not channel:
-                    raise Exception('Instrument contains multiple channels, please provide a channel number as defined in that instrument class')
-                instrument._nameGate(name, channel)
-                return
-        except AttributeError:
+            self.instrumentList[name] = self.instrumentList.pop(currInstName)
+        except KeyError:
             pass
-        instrumentList[name] = instrument
-        instrument._name = name
+
+        instrument.name = name
         
         return
     

@@ -6,12 +6,17 @@ from gui import GUI
 
 class qdacChannel:
     voltage = 0
-    def __init__(self, qdac, number, gui, name):
+    def __init__(self, qdac, number, gui, name, _qdacwrapper):
         self.qdacInst = qdac
         self.number = number
         self.guiDisplay = gui
         self._name = name
-    
+        self._qdacWrapper = _qdacwrapper
+        
+        loc = [number, 1]
+        self.guiDisplay.update_name(loc, name)
+        return
+        
     def __repr__(self):
         return 'QDAC Channel %s' % (self.number,)
     
@@ -19,6 +24,7 @@ class qdacChannel:
         #Uncomment below when actually connected to qdac
         #self.qdacInst.setDCVoltage(channel = number, volts = voltage)
         self.voltage = voltage
+        self._qdacWrapper.voltage_dict[self.number] = voltage
         
         #Location of gui is (channel #, 2) -- 2 is for column of voltages
         self.display_voltage([self.number, 2], voltage)
@@ -30,20 +36,33 @@ class qdacChannel:
         self.guiDisplay.submit_to_tkinter(loc, np.round(value,6))
         return
     
+    @property
+    def name(self):
+        return self._name
+    
+    @name.setter
+    def name(self, name):
+        self._qdacWrapper.channel_mapping[name] = self._qdacWrapper.channel_mapping.pop(self.name)
+        self._name = name
+        loc = [self.number, 1]
+        self.guiDisplay.update_name(loc, name)
+    
 class qdacWrapper:
     location = '/dev/ttyUSB0'
     qdacInst= 1
-    _name = 'qdac'
+    name = 'qdac'
     _multiChannel = True
     
     guiDisplay = GUI()
     guiDisplay.start()
     
     def __init__(self):
-        self.channel_mapping = {'qdac%s' % (n,):qdacChannel(qdac = self.qdacInst, number = n, gui = self.guiDisplay, name= 'qdac%s' % (n,)) for n in range(1,49)}
+        self.channel_mapping = {'qdac%s' % (n,):qdacChannel(qdac = self.qdacInst, number = n, gui = self.guiDisplay, name= 'qdac%s' % (n,), _qdacwrapper = self) for n in range(1,49)}
     #_defaultMapping = {'qdac%s' % (n,):qdacChannel(qdacInst, number) for n in range(1,49)}
     #voltage_list = np.zeros(48)
-    
+        return
+        
+        
     voltage_dict = {n: 0 for n in range(1,49)}
     
     def _nameGate(self, name, channel):
@@ -82,15 +101,6 @@ class qdacWrapper:
             self.voltage_dict[channels_list[i]] = voltages[i]
         return
         
-        
-        
-    def sweep(self):
-        return
-    
-    def sweep2D(self):
-        return
-    
-    
     def _getChannel(self, name):
         if self._nameExist(name):
             return self.channel_mapping[name]
@@ -99,12 +109,9 @@ class qdacWrapper:
             raise Exception("No channel with the name %s exists!" % (name,))
             
     def _getName(self, channel):
-        if self._channelExist(channel):
-            for _name, _channel in self.channel_mapping.items():
-                if _channel == channel.number:
-                    return _name
-        else:
-            raise Exception("Channel %s has not been assigned a name!" % (channel,))
+        for name in self.channel_mapping:
+            if self.channel_mapping[name].number == channel:
+                return name
     
     def _nameExist(self, name):
         if type(name) != str:
@@ -163,7 +170,7 @@ class qdacWrapper:
         return channel_df
     
     def print_readable_snapshot(self):
-        print(self._name + ':\n')
+        print(self.name + ':\n')
         display(self.snapshot())
             
         
