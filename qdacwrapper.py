@@ -13,10 +13,11 @@ class qdacChannel:
         self._name = name
     
     def __repr__(self):
-        return 'QDAC Channel %s' % (number,)
+        return 'QDAC Channel %s' % (self.number,)
     
     def ramp(self, voltage):
-        self.qdacInst.setDCVoltage(channel = number, volts = voltage)
+        #Uncomment below when actually connected to qdac
+        #self.qdacInst.setDCVoltage(channel = number, volts = voltage)
         self.voltage = voltage
         
         #Location of gui is (channel #, 2) -- 2 is for column of voltages
@@ -33,6 +34,7 @@ class qdacWrapper:
     location = '/dev/ttyUSB0'
     qdacInst= 1
     _name = 'qdac'
+    _multiChannel = True
     
     guiDisplay = GUI()
     guiDisplay.start()

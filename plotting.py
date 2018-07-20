@@ -30,18 +30,17 @@ class PlottingThread(threading.Thread):
     @property
     def _sweepDescription(self):
         """Automatic description that just uses sweep extents"""
+        inst1_dict = self.point_dict[self.inst1._name]
         if self.sweep2D:
-            return "x=%s to %s in %s steps and y=%s to %s in %s steps" % (min(self.point_dict['x']), max(self.point_dict['x']), len(self.point_dict['x'])-1, min(self.point_dict['y']), max(self.point_dict['y']), len(self.point_dict['y'])-1)
+            inst2_dict = self.point_dict[self.inst2._name]
+            return "x=%s to %s in %s steps and y=%s to %s in %s steps" % (min(inst1_dict), max(inst1_dict), len(inst1_dict)-1, min(inst2_dict), max(inst2_dict), len(inst2_dict)-1)
         
-        return "x=%s to %s in %s steps" % (min(self.point_dict['x']), max(self.point_dict['x']), len(self.point_dict['x'])-1)
+        return "x=%s to %s in %s steps" % (min(inst1_dict), max(inst1_dict), len(inst1_dict)-1)
     
-    def display_voltage(self, loc, value):
-        """Send voltage to Tkinter table to be displayed"""
-        self.gui.submit_to_tkinter(loc, np.round(value,6))
-        return
-    
-    def savegen(self):
-        return
+
+    def savegen(self, result):
+        name = time.strftime('%b-%d-%Y_%H-%M-%S', time.localtime())
+        return saveClass.savedData(result, self.currentState, name, self._sweepDescription)
     
     def save2D(self,result, channel1, start1, stop1, channel2, start2,stop2):
         """Use result and sweep extents to save into the savedData class"""
@@ -87,9 +86,7 @@ class PlottingThread(threading.Thread):
             if self.inst2:
                 self.sweep2D = True
                 y_data = self.point_dict[self.inst2._name]
-            #for inst in self.measInst:
-            #    pass
-            #measurementData = self.point_dict[self.measInst._name]
+            
             
             
             #This defines how to update the Holoviews DynamicMap. Essentially the DynamicMap works through streams where some function can stream data into the plot. Since here we are just updating the data displayed, this function just returns a plot of the current data.
@@ -98,7 +95,7 @@ class PlottingThread(threading.Thread):
                     dispsq = hv.Image((x_data, y_data, self.point_dict[self.measInst[0]._name]), kdims = [self.inst1._name, self.inst2._name], vdims = self.measInst[0]._name).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
                     for i in range(1,len(self.measInst)):
                         dispsq += hv.Image((x_data, y_data, self.point_dict[self.measInst[i]._name]), kdims = [self.inst1._name, self.inst2._name], vdims = self.measInst[i]._name).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
-                    #dispsq = hv.Image((x_data, y_data, measurementData), kdims = [self.inst1._name, self.inst2._name], vdims = self.measInst._name).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
+                    
                 else:
                     dispsq = hv.Curve((x_data, self.point_dict[self.measInst[0]._name]), kdims = self.inst1._name, vdims = self.measInst[0]._name).opts(norm=dict(framewise=True)).options(color=hv.Cycle('Colorblind').values[0])
                     for i in range(1, len(self.measInst)):
@@ -123,16 +120,16 @@ class PlottingThread(threading.Thread):
                         if self.stopflag:
                             if not np.isnan(self.point_dict[self.measInst[0]._name]).all():
                                 #create another copy of the image because dynamic map object now exists in main thread
-                                #img = hv.Image((x_data, y_data, measurementData)).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
                                 img = update_fn()
 
                                 return img
                             return
                         if self.get_plot:
                             #Used to get plot while its running
-                            #img = hv.Image((x_data, y_data, measurementData)).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
+                            
                             img = update_fn()
-                            data = self.save2D(img,1, min(x_data), max(x_data), 2, min(y_data), max(y_data))
+                            #data = self.save2D(img,1, min(x_data), max(x_data), 2, min(y_data), max(y_data))
+                            data = self.savegen(img)
                             #self.qu.put(img)
                             self.sendData(data)
                             self.get_plot = False
@@ -142,13 +139,11 @@ class PlottingThread(threading.Thread):
                         
                         for inst in self.measInst:
                             self.point_dict[inst._name][j,i] = inst.measure()
-                        #measurementData[j,i] = self.measInst.measure()
-                        
                         
                         #Update DynamicMap with updated data
                         dmap.event()
                         
-                #img = hv.Image((x_data, y_data, measurementData)).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
+                
                 img = update_fn()
                 return img
             
@@ -158,16 +153,16 @@ class PlottingThread(threading.Thread):
                     if self.stopflag:
                         if not np.isnan(self.point_dict[self.measInst[0]._name]).all():
                                 #create another copy of the image because dynamic map object now exists in main thread
-                            #img = hv.Curve((x_data, measurementData)).opts(norm=dict(framewise=True))
+                            
                             img = update_fn()
                             return img
                         return
                     if self.get_plot:
                         #Used to get plot while its running
-                        #img = hv.Curve((x_data, measurementData)).opts(norm=dict(framewise=True))
+                        
                         img = update_fn()
-                        data = self.save1D(img,1, min(x_data), max(x_data))
-                            #self.qu.put(img)
+                        #data = self.save1D(img,1, min(x_data), max(x_data))
+                        data = self.savegen(img)
                         self.sendData(data)
                         self.get_plot = False
                     time.sleep(.1)
@@ -178,7 +173,7 @@ class PlottingThread(threading.Thread):
                     
                     dmap.event()
                     
-                #img = hv.Curve((x_data, measurementData)).opts(norm=dict(framewise=True))
+                
                 img = update_fn()
                 return img
             
@@ -202,19 +197,22 @@ class PlottingThread(threading.Thread):
         img = self.measure()
         
         
-        x_data = self.point_dict[self.inst1._name]
-        xmin = min(x_data)
-        xmax = max(x_data)
-        if self.inst2:
-            y_data = self.point_dict[self.inst2._name]
-            ymin = min(y_data)
-            ymax = max(y_data)
+        #x_data = self.point_dict[self.inst1._name]
+        #xmin = min(x_data)
+        #xmax = max(x_data)
+        #if self.inst2:
+        #    y_data = self.point_dict[self.inst2._name]
+        #    ymin = min(y_data)
+        #    ymax = max(y_data)
+        #if img:
+        #    if self.sweep2D:
+        #        data = self.save2D(img,1, xmin, xmax, 2, ymin, ymax)
+        #        
+        #    else:
+        #        data = self.save1D(img, 1, xmin, xmax)
+        
         if img:
-            if self.sweep2D:
-                data = self.save2D(img,1, xmin, xmax, 2, ymin, ymax)
-                
-            else:
-                data = self.save1D(img, 1, xmin, xmax)
+            data = self.savegen(img)
             
             #Empty retrieval queue before putting data in (as long as main thread isn't putting stuff in simultaneously I think this should be fine since other threads are blocked until this thread finishes)
             self.sendData(data)
@@ -235,53 +233,37 @@ class PlottingOverview():
     
     
     thread_count = 0
-    #gui = GUI()
-    #gui.start()
     plot_thread = None
     
-    def display_voltage(self, loc, value):
-        self.gui.submit_to_tkinter(loc, np.round(value,3))
-        return
-
-    
-    def _sweep(self, inst1, measInst, points, inst2 = None):
+    def _sweep(self, inst1, measInst, points, currState, inst2 = None):
         #create queue that data is passed through
         self.q = queue.Queue()
         
         
         if self.plot_thread and self.plot_thread.isAlive():
-            self.plot_thread = PlottingThread(self.thread_count, "Thread %s" % (self.thread_count,), points, self.q, self.retrieval_queue, instrument1 = inst1, instrument2 = inst2, measurementInstrument = measInst, last_thread = self.plot_thread)
+            self.plot_thread = PlottingThread(self.thread_count, "Thread %s" % (self.thread_count,), points, self.q, self.retrieval_queue, instrument1 = inst1, instrument2 = inst2, measurementInstrument = measInst, last_thread = self.plot_thread, currentState = currState)
         else:
-            self.plot_thread = PlottingThread(self.thread_count, "Thread %s" % (self.thread_count,), points, self.q, self.retrieval_queue, instrument1 = inst1, instrument2 = inst2, measurementInstrument = measInst)
+            self.plot_thread = PlottingThread(self.thread_count, "Thread %s" % (self.thread_count,), points, self.q, self.retrieval_queue, instrument1 = inst1, instrument2 = inst2, measurementInstrument = measInst, currentState = currState)
         
         self.thread_count += 1
         self.plot_thread.start()
             
         #time.sleep(.1)
-        #Using .get instead of no wait because .get blocks until it actually gtes an object
+        #Using .get instead of no wait because .get blocks until it actually gets an object
         img = self.q.get()
         #self.plot_thread.join() #Temporary, used to see this plots full outputs
         #time.sleep(.1)
-        #print(img)
-        #hv.ipython.display(img)
         return img
 
-   
-    
-    def addPlot(self, data, start1, stop1, num1):
-        prev_plot = data.plot
-        plot = self.sweep(start1, stop1, num1)
-        return prev_plot*plot
-        
 
-    def get_plot(self):
+    def _getPlot(self):
         try:
             return self.retrieval_queue.get_nowait()
         except queue.Empty:
             print("No Plot to get!")
         
     
-    def get_plot_running(self, wait_time =10):
+    def _getPlotRunning(self, wait_time =10):
         #Used to get plot of currently running measurement
         curr_thread = self._runningThread
         curr_thread.get_plot = True
@@ -292,7 +274,7 @@ class PlottingOverview():
             if i == wait_time:
                 print("Waited 10 seconds without response, if measurement time of a point is longer than this use optional argument wait_time")     
                 return
-        return self.get_plot()
+        return self._getPlot()
         
 
     @property
@@ -316,13 +298,6 @@ class PlottingOverview():
         curr_thread.stopflag = True
         return
     
-    def nameGate(self,name, channel, override=False):
-        self._qdac._nameGate(name, channel, override)
-        #update tkinter#
-        #Channel name column is 1
-        loc = [channel, 1]
-        self.gui.update_name(loc, name)
-        
     @property
     def current_queue(self):
         queue_list = []

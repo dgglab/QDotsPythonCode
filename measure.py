@@ -21,47 +21,64 @@ class Measurement:
         except AttributeError:
             pass
         self.instrumentList[instrument._name] = instrument
-            
-        
-    def _parseInstrument(self, input_channel):
         return
     
     def ramp(self, instruments, values):
-        if type(instruments) in {np.ndarray, list, tuple}:
-            if len(instruments) != len(list(voltages)):
-                raise Exception("Different number of channels provided than voltages")
+        values = np.array([values]).flatten()
                 
-        #convert instrument names into their respective instrument objects
+        #Convert instrument names into their respective instrument objects
         instruments = self._convertInstruments(instruments)
+        if len(instruments) != len(values):
+            raise Exception("Different number of channels provided than voltages")
         for i in range(len(instruments)):
             instruments[i].ramp(values[i])
-        
+        return
         
     def sweep(self, sweepInst, start, end, steps, measurement):
         sweepInst = self._getInstrument(sweepInst)
-        #measInst = self._getInstrument(measurement)
         measInsts = self._convertInstruments(measurement)
         
         x_data = np.linspace(start, end, steps+1)
-        points = {sweepInst._name: x_data}#, measInst._name:np.full(len(x_data), np.nan)}
+        points = {sweepInst._name: x_data}
+        
         for inst in measInsts:
             points[inst._name] = np.full(len(x_data), np.nan)
-        return self._plottingManager._sweep(inst1 = sweepInst, measInst = measInsts, points = points)
+            
+        return self._plottingManager._sweep(inst1 = sweepInst, measInst = measInsts, points = points, currState = self.currentState)
         
     
     def sweep2D(self, sweepInst1, start1, end1, steps1, sweepInst2, start2, end2, steps2, measurement):
         sweepInst1 = self._getInstrument(sweepInst1)
         sweepInst2 = self._getInstrument(sweepInst2)
-        #measInst = self._getInstrument(measurement)
+        
         measInsts = self._convertInstruments(measurement)
         
         x_data = np.linspace(start1, end1, steps1+1)
         y_data = np.linspace(start2, end2, steps2+1)
-        points = {sweepInst1._name: x_data, sweepInst2._name: y_data}#, measInst._name:np.full((len(y_data),len(x_data)), np.nan)}
+        points = {sweepInst1._name: x_data, sweepInst2._name: y_data}
+        
         for inst in measInsts:
             points[inst._name] = np.full((len(y_data), len(x_data)), np.nan)
-        return self._plottingManager._sweep(inst1 = sweepInst1, inst2= sweepInst2, measInst = measInsts,points = points)
+            
+        return self._plottingManager._sweep(inst1 = sweepInst1, inst2= sweepInst2, measInst = measInsts, points = points, currState = self.currentState)
         
+    def getPlot(self):
+        return _plottingManager._getPlot()
+        
+    
+    def getPlotRunning(self, wait_time =10):
+        #Used to get plot of currently running measurement
+        return _plottingManager._getPlotRunning()
+    
+    def abortSweep(self):
+        return _plottingManager.abort_sweep()
+    
+    def abortAll(self):
+        return _plottingManager.abort_all()
+    
+    def abortSweepID(self, id):
+        return _plottingManager.abortSweepID(id)
+    
     
     def _getInstrument(self, channel):
         """Returns the instrument that corresponds to a given name"""
@@ -106,19 +123,8 @@ class Measurement:
         
     
     def nameInstrument(self, instrument, name, channel = False):
-        """Rename an instrument. The inputs should be instrument, name= 'New name', channel = channel number"""
-        #instrument = self._getInstrument(instrument_name)
-        #instrument = instrumentList[instrument_name]
-        #if instrument._multiChannel:
-            #if not channel:
-                #raise Exception('Instrument contains multiple channels, please provide a channel number as defined in that instrument class')
-            #else:
-                #instrument._nameGate(name, channel, override = True)
-                
-        #else:
-            #instrument._name = name
-        
-        #Check if name alreday taken
+        """Rename an instrument. The inputs should be instrument, name= 'New name', channel = channel number (if instrument has multiple channels)"""
+        #Check if name already taken
         if name in self._InstrumentNamesList:
             raise Exception('Name already taken by %s' % (self._getInstrument(name)))
         
@@ -152,10 +158,10 @@ class Measurement:
             currState[instrument] = self.instrumentList[instrument].snapshot()
         return currState
     
-    
+    @property
     def readableCurrentState(self):
         currState = {}
         for instrument in self.instrumentList:
             self.instrumentList[instrument].print_readable_snapshot()
             print('\n')
-        #return currState
+        return
