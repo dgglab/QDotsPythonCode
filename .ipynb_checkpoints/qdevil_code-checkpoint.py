@@ -138,7 +138,7 @@ class qdacWrapper:
         else:
             raise Exception("Inputs should an existing Channel name or integer between 1 and 48")
         
-    def _convertDF(self):
+    def snapshot(self):
         #Convert voltage table to pandas data frame
         #channel_table = {'Channel Number': [], 'Channel Name': [], 'Voltage': []}
         channel_table = {'Channel Name': [], 'Voltage': []}
@@ -162,7 +162,7 @@ class qdacWrapper:
     
     def print_readable_snapshot(self):
         print(self._name + ':\n')
-        display(self._convertDF())
+        display(self.snapshot())
             
         
             
