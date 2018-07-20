@@ -2,8 +2,11 @@ import numpy as np
 from plotting import PlottingOverview
 
 class Measurement:
-    instrumentList = {}
+    
     _plottingManager = PlottingOverview()
+    
+    def __init__(self):
+        self.instrumentList = {}
     
     def addInstrument(self, instrument):
         if instrument._name in self._InstrumentNamesList:
@@ -146,6 +149,13 @@ class Measurement:
     def currentState(self):
         currState = {}
         for instrument in self.instrumentList:
-            currState[instrument] = instrument.snapshot()
+            currState[instrument] = self.instrumentList[instrument].snapshot()
         return currState
     
+    
+    def readableCurrentState(self):
+        currState = {}
+        for instrument in self.instrumentList:
+            self.instrumentList[instrument].print_readable_snapshot()
+            print('\n')
+        #return currState

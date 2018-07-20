@@ -1,6 +1,7 @@
 import qdac
 import numpy as np
 import pandas as pd
+from IPython.display import display
 from gui import GUI
 
 class qdacChannel:
@@ -36,7 +37,8 @@ class qdacWrapper:
     guiDisplay = GUI()
     guiDisplay.start()
     
-    channel_mapping = {'qdac%s' % (n,):qdacChannel(qdacInst, n, guiDisplay, 'qdac%s' % (n,)) for n in range(1,49)}
+    def __init__(self):
+        self.channel_mapping = {'qdac%s' % (n,):qdacChannel(qdac = self.qdacInst, number = n, gui = self.guiDisplay, name= 'qdac%s' % (n,)) for n in range(1,49)}
     #_defaultMapping = {'qdac%s' % (n,):qdacChannel(qdacInst, number) for n in range(1,49)}
     #voltage_list = np.zeros(48)
     
@@ -157,6 +159,10 @@ class qdacWrapper:
         #Rearrange columns to ensure that Channel name comes before Voltage
         channel_df = channel_df[['Channel Name', 'Voltage']]
         return channel_df
+    
+    def print_readable_snapshot(self):
+        print(self._name + ':\n')
+        display(self._convertDF())
             
         
             

@@ -1,4 +1,6 @@
 import tkinter as tk
+import threading
+import queue
 
 class GUI(threading.Thread):
     #Tkinter class for background updating of instrument values
@@ -33,7 +35,8 @@ class GUI(threading.Thread):
 
                 display_label = self.label_dict[loc[0]][loc[1]]
                 display_label.config(text='%s' % (value,))
-
+            
+            #Wait 10ms then run timertick again 
             self.t.after(10, timertick)
 
         self.t = tk.Tk()

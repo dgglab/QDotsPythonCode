@@ -1,4 +1,6 @@
 import tkinter as tk
+import threading
+import queue
 
 class GUI(threading.Thread):
     #Tkinter class for background updating of instrument values
