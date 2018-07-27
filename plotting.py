@@ -30,9 +30,9 @@ class PlottingThread(threading.Thread):
     @property
     def _sweepDescription(self):
         """Automatic description that just uses sweep extents"""
-        inst1_dict = self.point_dict[self.inst1._name]
+        inst1_dict = self.point_dict[self.inst1.name]
         if self.sweep2D:
-            inst2_dict = self.point_dict[self.inst2._name]
+            inst2_dict = self.point_dict[self.inst2.name]
             return "x=%s to %s in %s steps and y=%s to %s in %s steps" % (min(inst1_dict), max(inst1_dict), len(inst1_dict)-1, min(inst2_dict), max(inst2_dict), len(inst2_dict)-1)
         
         return "x=%s to %s in %s steps" % (min(inst1_dict), max(inst1_dict), len(inst1_dict)-1)
@@ -81,6 +81,7 @@ class PlottingThread(threading.Thread):
     def measure(self):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", message="All-NaN slice encountered")
+            warnings.filterwarnings("ignore", message = "All-NaN axis encountered")
             
             x_data = self.point_dict[self.inst1.name]
             if self.inst2:
@@ -241,7 +242,7 @@ class PlottingOverview():
         
         
         if self.plot_thread and self.plot_thread.isAlive():
-            self.plot_thread = PlottingThread(self.thread_count, "Thread %s" % (self.thread_count,), points, self.q, self.retrieval_queue, instrument1 = inst1, instrument2 = inst2, measurementInstrument = measInst, last_thread = self.plot_thread, currentState = currState)
+            self.plot_thread = PlottingThread(self.thread_count, "Thread %s" % (self.thread_count,), points, self.q, self.retrieval_queue, instrument1 = inst1, instrument2 = inst2, measurementInstrument = measInst, lthread = self.plot_thread, currentState = currState)
         else:
             self.plot_thread = PlottingThread(self.thread_count, "Thread %s" % (self.thread_count,), points, self.q, self.retrieval_queue, instrument1 = inst1, instrument2 = inst2, measurementInstrument = measInst, currentState = currState)
         

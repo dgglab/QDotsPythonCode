@@ -1,5 +1,8 @@
 import numpy as np
 from plotting import PlottingOverview
+import ipywidgets as widgets
+import param
+import holoviews as hv
 
 class Measurement:
     
@@ -63,21 +66,21 @@ class Measurement:
         return self._plottingManager._sweep(inst1 = sweepInst1, inst2= sweepInst2, measInst = measInsts, points = points, currState = self.currentState)
         
     def getPlot(self):
-        return _plottingManager._getPlot()
+        return self._plottingManager._getPlot()
         
     
     def getPlotRunning(self, wait_time =10):
         #Used to get plot of currently running measurement
-        return _plottingManager._getPlotRunning()
+        return self._plottingManager._getPlotRunning()
     
     def abortSweep(self):
-        return _plottingManager.abort_sweep()
+        return self._plottingManager.abort_sweep()
     
     def abortAll(self):
-        return _plottingManager.abort_all()
+        return self._plottingManager.abort_all()
     
     def abortSweepID(self, id):
-        return _plottingManager.abortSweepID(id)
+        return self._plottingManager.abortSweepID(id)
     
     
     def _getInstrument(self, channel):
@@ -170,3 +173,50 @@ class Measurement:
             self.instrumentList[instrument].print_readable_snapshot()
             print('\n')
         return
+    
+    
+def cut(image):
+    #Cut with slider instead of clicking on point. This fixes the problem of limited step size of .01 when using redim method. Instead using ipython widget which controls a created stream object, which can be passed into the dynamic map.
+    
+    class xy(hv.streams.Stream):
+        x = param.Number(default=0.0,  doc='An X position.')
+        y = param.Number(default=0.0, doc='A Y position.')
+    
+    x_axis = np.unique(image.dimension_values(0))
+    y_axis = np.unique(image.dimension_values(1))
+    xw=widgets.SelectionSlider(options=[("%g"%i,i) for i in x_axis])
+    yw=widgets.SelectionSlider(options=[("%g"%i,i) for i in y_axis])
+    #display(xw)
+    #display(yw)
+    xyst = xy(x=x_axis[0], y=y_axis[0])
+    #dmap = hv.DynamicMap(lambda x, y: hv.Curve(([x,2*x], [2.0*y,3*y])), streams=[xyst])
+    def marker(x,y):
+        x_dim = {image.kdims[0].label: x}
+        y_dim = {image.kdims[1].label: y}
+        crosssection1 = image.sample(**x_dim).opts(norm=dict(framewise=True))#.opts(plot=dict(width = 200),norm=dict(framewise=True))
+        crosssection1y = image.sample(**y_dim).opts(norm=dict(framewise=True))#.opts(plot=dict(height = 200), norm=dict(framewise=True))
+        return hv.Layout(image * hv.VLine(x) * hv.HLine(y) + crosssection1+crosssection1y).cols(2)
+    dmap = hv.DynamicMap(marker, streams=[xyst])
+    
+    def plot(x,y):
+        xyst.event(x=x, y=y)
+        
+
+    hv.ipython.display(dmap)
+    return widgets.interact(plot, x=widgets.SelectionSlider(options=[("%g"%i,i) for i in x_axis], continuous_update=False), y=widgets.SelectionSlider(options=[("%g"%i,i) for i in y_axis]))
+
+def save(savedData, name = False):
+    """Input is the savedData object that is returned from a sweep. Optional argument is the name of the saved file. Default behavior is to overwrite the existing file name that is automatically given"""
+    if name:
+        save_name = name
+    else:
+        save_name = savedData.name
+    with open('%s.p' % (save_name,), 'wb') as file:
+        pickle.dump(savedData, file)
+    return
+
+def load(filename):
+    """Input is the pickled file that was automatically created from measurement or use of save function. Returns savedData object"""
+    with open(filename, 'rb') as file:
+        savedData = pickle.load(file)
+        return savedData
