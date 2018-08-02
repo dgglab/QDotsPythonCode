@@ -4,6 +4,7 @@ from IPython.display import display
 
 class savedData:
     def __init__(self, result, metadata, name, description):
+        """Object used to hold resulting plot from a measurement, basic description of measurement, and metadata about system state."""
         self._plot = result
         self._metadata = metadata
         self.name = name
@@ -17,17 +18,17 @@ class savedData:
     
     @property
     def data(self):
-        """Returns data as pandas dataframe"""
+        """Returns raw data as pandas dataframe"""
         return self.plot.dframe()
     
     @property
     def state(self):
-        """Returns state of all instruments at time of measurement"""
+        """Returns state of all instruments at time of measurement as a dictionary, based off snapshot feature of QCoDeS instruments"""
         return self._metadata
     
     @property
     def readableState(self):
-        """Simplifier state of all instruments"""
+        """Prints clean and simplified state of all instruments."""
         for inst in self._metadata:
             snapshot = self._metadata[inst]
             if type(snapshot) == dict:
@@ -40,7 +41,7 @@ class savedData:
     
     @property
     def plot(self):
-        """Displays the plot associated with the given measurement"""
+        """Returns the plot associated with the given measurement. With Holoviews objects this should also display the plot inline"""
         if type(self._plot) == hv.Image:
             return self._plot.opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
         return self._plot
