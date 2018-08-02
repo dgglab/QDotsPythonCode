@@ -50,7 +50,7 @@ def query(comment):
     
     Args:
         comment: Comment to search for. Looks for comments that just contain
-		input comment ie 'o' will return data with the comment of 'good'
+            input comment ie 'o' will return data with the comment of 'good'
     """
     pd.set_option('display.max_colwidth', -1)
     
@@ -61,7 +61,8 @@ def query(comment):
 
 def _dataTable():
     """Returns Pandas Dataframe that is used to display table in listData or
-	query"""
+    query
+    """
     
     #Get all files with .p extension
     datafiles = glob.glob('*.p')

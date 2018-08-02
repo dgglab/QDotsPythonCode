@@ -16,7 +16,7 @@ class Measurement:
     
     def ramp(self, instruments, values):
         """Ramps an instrument (given by name) to a corresponding value
-		(set by instrument driver).
+        (set by instrument driver).
             
         Args:
             instruments: Name given to instrument. Can be an array of names.
@@ -38,8 +38,8 @@ class Measurement:
         
     def sweep(self, sweepInst, start, end, steps, measureParams):
         """1D Sweep. Will display plot inline, but if assigned
-		(ie result = sweep(..)) the return value should also be the
-		updating plot.
+        (ie result = sweep(..)) the return value should also be the
+        updating plot.
         
         Args:
             sweepInst: Name of instrument to be swept
@@ -49,12 +49,12 @@ class Measurement:
             end: Final value to sweep to
             
             steps: Number of steps between start and end value.
-				One additional step is automatically added for convenience, 
-				such as a sweep from 2 to 5 in 3 steps actually has 4
-				steps (2,3,4,5).
+                One additional step is automatically added for convenience, 
+                such as a sweep from 2 to 5 in 3 steps actually has 4
+                steps (2,3,4,5).
                 
             measureParams: List of names of measurement instruments to be
-				measured at each point.
+                measured at each point.
         """
         
         sweepInst = self._getInstrument(sweepInst)
@@ -73,8 +73,8 @@ class Measurement:
     def sweep2D(self, sweepInst1, start1, end1, steps1, sweepInst2, start2,
                 end2, steps2, measureParams):
         """2D Sweep. Will display plot inline, but if
-		assigned (ie result = sweep(..)) the return value should also be the
-		updating plot.
+        assigned (ie result = sweep(..)) the return value should also be the
+        updating plot.
         
         Args:
             sweepInst1: Name of first instrument to be swept. This will be
@@ -172,9 +172,9 @@ class Measurement:
     @property
     def InstrumentNames(self):
         """Returns dictionary of all the instrument names (including individual
-		channels of multi-channeled instruments).
-		The format is {name: instrument}
-		"""
+        channels of multi-channeled instruments).
+        The format is {name: instrument}
+        """
         names_dict = {}
         for name in self.instrumentDict:
             instrument = self.instrumentDict[name]
@@ -187,8 +187,8 @@ class Measurement:
     @property
     def _InstrumentNamesList(self):
         """Returns a flattened out list of all instrument names including
-		individual channels
-		"""
+        individual channels
+        """
         names = []
         for name in self.instrumentDict:
             names.append(name)
@@ -219,7 +219,7 @@ class Measurement:
     
     def nameInstrument(self, currInstName, name):
         """Rename an instrument. Will raise an error if the new name is already
-		being used.
+        being used.
         
         Args:
             currInstName: The current name of the instrument to be renamed.
@@ -252,8 +252,8 @@ class Measurement:
     
     def _convertInstruments(self, channels):
         """Convert list of names of instruments or channels into a list of the
-		respective instrument objects. Returns this list of instrument objects
-		"""
+        respective instrument objects. Returns this list of instrument objects
+        """
         input_type = type(channels)
         if input_type in {np.ndarray, list, tuple}:
             if len(channels) == 1:
@@ -266,8 +266,8 @@ class Measurement:
     @property
     def currentState(self):
         """Returns detailed dictionary containing all the current state
-		information about each instrument (relies on QCoDeS snapshot feature)
-		"""
+        information about each instrument (relies on QCoDeS snapshot feature)
+        """
         currState = {}
         for instrument in self.instrumentDict:
             currState[instrument] = self.instrumentDict[instrument].snapshot()
@@ -276,8 +276,8 @@ class Measurement:
     @property
     def readableCurrentState(self):
         """Prints a simplified version of current state that prints easily
-		readable state information
-		"""
+        readable state information
+        """
         currState = {}
         for instrument in self.instrumentDict:
             self.instrumentDict[instrument].print_readable_snapshot()

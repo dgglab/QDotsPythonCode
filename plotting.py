@@ -11,8 +11,8 @@ import numpy as np
 
 class PlottingThread(threading.Thread):
     def __init__(self, threadID, points, dataQueue, retrQueue, instrument1,
-				measurementInstrument, currentState =None, instrument2 = None,
-				lthread = None):
+                measurementInstrument, currentState =None, instrument2 = None,
+                lthread = None):
         """Thread object that handles background sweeping and measuring of
 		instruments.
         
@@ -75,7 +75,7 @@ class PlottingThread(threading.Thread):
     @property
     def _sweepDescription(self):
         """Automatic description that just uses sweep extents. Returns
-		description as string"""
+        description as string"""
         inst1_dict = self.point_dict[self.inst1.name]
         if self.sweep2D:
             inst2_dict = self.point_dict[self.inst2.name]
@@ -85,7 +85,7 @@ class PlottingThread(threading.Thread):
     
     def savegen(self, result):
         """Creates savedData object of measurement data and metadata, and uses
-		current time as the name. Returns savedData object
+        current time as the name. Returns savedData object
         
         Args:
             result: The plot to be saved. Typically is a Holoviews Curve
@@ -96,7 +96,7 @@ class PlottingThread(threading.Thread):
     
     def save(self, savedData):
         """Saves a savedData object as pickle file. Also saves a picture of the
-		plot to be used as a thumbnail.
+        plot to be used as a thumbnail.
         
         Args:
             savedData: savedData object containing data and metadata information
@@ -108,11 +108,11 @@ class PlottingThread(threading.Thread):
     
     def measure(self):
         """Main function run by thread. This creates the Holoviews DynamicMap,
-		ramps instruments to given values, measures, and then updates plot. 
-		Two flags are checked, one whether to send the current plot to the main
-		thread for retreival, and another to check whether to abort. Returns the
-		completed (or aborted) Holoviews Curve or Image.
-		"""
+        ramps instruments to given values, measures, and then updates plot. 
+        Two flags are checked, one whether to send the current plot to the main
+        thread for retreival, and another to check whether to abort. Returns the
+        completed (or aborted) Holoviews Curve or Image.
+        """
         with warnings.catch_warnings():
             #This ignores error when plot created with all-nan data. Not sure if
 			#there's a way around this, initializing with nan allows for the
@@ -160,27 +160,27 @@ class PlottingThread(threading.Thread):
             dmap = hv.DynamicMap(update_fn, streams=[hv.streams.Stream.define("Dummy")()])
             
             #This particular sleep may not be needed, but in general when using
-			#background threads without blocking in main thread, may not get
-			#expected behavior when running functions in main thread.
+            #background threads without blocking in main thread, may not get
+            #expected behavior when running functions in main thread.
             time.sleep(.1)
             
             #Send DynamicMap to main thread to be displayed
             self.qu.put(dmap)
             #This sleep helps fix some issues where main thread plot wouldn't
-			#show updates
+            #show updates
             time.sleep(1)
             
             #Block thread until all previous threads are finished. I don't just
-			#check last thread here, in case one thread dies unexpectedly in the
-			#middle of a queue and another is still running
+            #check last thread here, in case one thread dies unexpectedly in the
+            #middle of a queue and another is still running
             curr_thread = self.last_thread
             while curr_thread:
                 curr_thread.join()
                 curr_thread = curr_thread.last_thread
                 
             #Different blocks for 2D vs 1D sweep, but intuitively seems
-			#unnecessary. Also makes it harder to modify, since have to modify
-			#both blocks. 
+            #unnecessary. Also makes it harder to modify, since have to modify
+            #both blocks. 
             if self.sweep2D:
                 for i in range(len(x_data)):
                     #Ramp x axis instrument
@@ -209,9 +209,9 @@ class PlottingThread(threading.Thread):
                         self.inst2.ramp(y_data[j])
                         
                         #This wait necessary for instantaneous ramping and
-						#measuring of instruments but for real
-						#instruments + lock in there will inherently be a wait
-						#time so probably not necessary there?
+                        #measuring of instruments but for real
+                        #instruments + lock in there will inherently be a wait
+                        #time so probably not necessary there?
                         time.sleep(.1)
                         
                         for inst in self.measInst:
@@ -219,7 +219,7 @@ class PlottingThread(threading.Thread):
                             self.point_dict[inst.name][j,i] = inst.measure()
                         
                         #Update DynamicMap with updated data (basically just
-						#calls update_fn again)
+                        #calls update_fn again)
                         dmap.event()
                 img = update_fn()
                 return img
@@ -230,7 +230,7 @@ class PlottingThread(threading.Thread):
                     if self.stopflag:
                         if not np.isnan(self.point_dict[self.measInst[0].name]).all():
                                 #create another copy of the image because
-								#dynamic map object now exists in main thread
+                                #dynamic map object now exists in main thread
                             
                             img = update_fn()
                             return img
@@ -256,14 +256,14 @@ class PlottingThread(threading.Thread):
             
     def sendData(self, data):
         """Put data into queue as only object, by first repeatedly pulling from
-		queue until empty. Want queue to be empty because user may not always
-		retrieve from queue after every sweep, and expected behavior is that
-		retrieving from queue should get the latest sweep
-		"""
+        queue until empty. Want queue to be empty because user may not always
+        retrieve from queue after every sweep, and expected behavior is that
+        retrieving from queue should get the latest sweep
+        """
         
         #Empty retrieval queue before putting data in (as long as main thread
-		#isn't putting stuff in simultaneously I think this should be fine since
-		#other threads are blocked until this thread finishes)
+        #isn't putting stuff in simultaneously I think this should be fine since
+        #other threads are blocked until this thread finishes)
         while(1):
             try:
                 self.retrieval_queue.get_nowait()
@@ -273,12 +273,12 @@ class PlottingThread(threading.Thread):
     
     def run(self):
         """This defines what the thread does when started. First starts the
-		measurement function, and when finished returns the finished plot, puts
-		it into the savedData object, and puts the object in the queue for the
-		main thread to retrieve. Finally it saves the object into a pickle
-		format to be read earlier. The measure function itself sends the empty
-		plot to the main thread which is then updated.
-		"""
+        measurement function, and when finished returns the finished plot, puts
+        it into the savedData object, and puts the object in the queue for the
+        main thread to retrieve. Finally it saves the object into a pickle
+        format to be read earlier. The measure function itself sends the empty
+        plot to the main thread which is then updated.
+        """
 
         img = self.measure()
         
@@ -297,7 +297,7 @@ class PlottingThread(threading.Thread):
 
 class PlottingOverview():
     """This object manages the different plotting threads for every sweep.
-	This is also used by Measurement object to access plotting threads in order
+    This is also used by Measurement object to access plotting threads in order
 	to retrieve data or abort threads
 	"""
       
@@ -314,8 +314,8 @@ class PlottingOverview():
     
     def _sweep(self, inst1, measInst, points, currState, inst2 = None):
         """Creates and starts PlottingThread with instruments to be swept.
-		Returns the DynamicMap the thread puts into a queue, such that main
-		thread can display.
+        Returns the DynamicMap the thread puts into a queue, such that main
+        thread can display.
         
         Args:
             inst1: Instrument to be swept on x-axis
@@ -323,7 +323,7 @@ class PlottingOverview():
             measInst: Intrument (or list of instruments) to be measured
             
             points: Dictionary of values to sweep to for each instrument as well
-				as array of measurement data
+                as array of measurement data
             
             currState: Metadata of current state of all instruments in system
             
@@ -333,8 +333,8 @@ class PlottingOverview():
         self.q = queue.Queue()
         
         #If last queued sweep thread is still running, then pass as the last
-		#thread for new sweep thread to reference (such that it waits for that
-		#thread to finish before running)
+        #thread for new sweep thread to reference (such that it waits for that
+        #thread to finish before running)
   
         if self.plot_thread and self.plot_thread.isAlive():
             self.plot_thread = PlottingThread(self.thread_count, points, self.q,
@@ -354,9 +354,8 @@ class PlottingOverview():
             
         #Retrieve image placed in queue by plotting thread
         #Using .get instead of no wait because .get blocks until it actually
-		#gets an object
+        #gets an object
         img = self.q.get()
-        #self.plot_thread.join() #Temporary, used to see this plots full outputs
         return img
 
 
@@ -410,7 +409,6 @@ class PlottingOverview():
         while curr_thread and curr_thread.isAlive():
             queue_list.append("ID %s: " % (curr_thread.threadID,) + curr_thread._sweepDescription)
             curr_thread = curr_thread.last_thread
-        #queue_list.append(curr_thread._sweepDescription)
         for sweep in queue_list[::-1]:
             print(sweep)
         return
@@ -438,11 +436,11 @@ class PlottingOverview():
     @property
     def currentlyRunning(self):
         """Returns True if there is currently an actively running thread.
-		Used to ensure main thread does not try to use instruments during a
-		sweep. Note this only checks the last thread in queue, which is not
-		necessarily the one that is currently sweeping instruments, but can be
-		paused waiting for previous threada to finish
-		"""
+        Used to ensure main thread does not try to use instruments during a
+        sweep. Note this only checks the last thread in queue, which is not
+        necessarily the one that is currently sweeping instruments, but can be
+        paused waiting for previous threada to finish
+        """
         if self.plot_thread and self.plot_thread.isAlive():
             return True
         return False
