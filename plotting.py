@@ -102,14 +102,14 @@ class PlottingThread(threading.Thread):
             #This defines how to update the Holoviews DynamicMap. Essentially the DynamicMap works through streams where some function can stream data into the plot. Since here we are just updating the data displayed, this function just returns a plot of the current data. Also this is ugly, but not sure how to make this cleaner.
             def update_fn():
                 if self.sweep2D:
-                    dispsq = hv.Image((x_data, y_data, self.point_dict[self.measInst[0].name]), kdims = [self.inst1.name, self.inst2.name], vdims = self.measInst[0].name).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
+                    dispsq = hv.Image((x_data, y_data, self.point_dict[self.measInst[0].name]), kdims=[self.inst1.name, self.inst2.name], vdims=self.measInst[0].name).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
                     for i in range(1,len(self.measInst)):
-                        dispsq += hv.Image((x_data, y_data, self.point_dict[self.measInst[i].name]), kdims = [self.inst1.name, self.inst2.name], vdims = self.measInst[i].name).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
+                        dispsq += hv.Image((x_data, y_data, self.point_dict[self.measInst[i].name]), kdims=[self.inst1.name, self.inst2.name], vdims=self.measInst[i].name).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
                     
                 else:
-                    dispsq = hv.Curve((x_data, self.point_dict[self.measInst[0].name]), kdims = self.inst1.name, vdims = self.measInst[0].name).opts(norm=dict(framewise=True)).options(color=hv.Cycle('Colorblind').values[0])
+                    dispsq = hv.Curve((x_data, self.point_dict[self.measInst[0].name]), kdims=self.inst1.name, vdims=self.measInst[0].name).opts(norm=dict(framewise=True)).options(color=hv.Cycle('Colorblind').values[0])
                     for i in range(1, len(self.measInst)):
-                        dispsq += hv.Curve((x_data, self.point_dict[self.measInst[i].name]), kdims = self.inst1.name, vdims = self.measInst[i].name).opts(norm=dict(framewise=True)).options(color = hv.Cycle('Colorblind').values[i])
+                        dispsq += hv.Curve((x_data, self.point_dict[self.measInst[i].name]), kdims=self.inst1.name, vdims=self.measInst[i].name).opts(norm=dict(framewise=True)).options(color=hv.Cycle('Colorblind').values[i])
                 return dispsq
             dmap = hv.DynamicMap(update_fn, streams=[hv.streams.Stream.define("Dummy")()])
             
@@ -121,12 +121,12 @@ class PlottingThread(threading.Thread):
             #This sleep helps fix some issues where main thread plot wouldn't show updates
             time.sleep(1)
             
-            #Block thread until previous thread (ie measurement finished)
-            if self.last_thread:
+            #Block thread until all previous threads are finished. I don't just check last thread here, in case one thread dies unexpectedly in the middle of a queue and another is still running
+            curr_thread = self.last_thread
+            while curr_thread:
+                curr_thread.join()
+                curr_thread = curr_thread.last_thread
                 
-                self.last_thread.join()
-            
-            
             #Different blocks for 2D vs 1D sweep, but intuitively seems unnecessary. Also makes it harder to modify, since have to modify both blocks. 
             if self.sweep2D:
                 for i in range(len(x_data)):
@@ -348,3 +348,9 @@ class PlottingOverview():
         print("No queued sweep with ID %s!" % (id,))
         return
     
+    @property
+    def currentlyRunning(self):
+        """Returns True if there is currently an actively running thread. Used to ensure main thread does not try to use instruments during a sweep. Note this only checks the last thread in queue, which is not necessarily the one that is currently sweeping instruments, but can be paused waiting for previous threada to finish"""
+        if self.plot_thread and self.plot_thread.isAlive():
+            return True
+        return False

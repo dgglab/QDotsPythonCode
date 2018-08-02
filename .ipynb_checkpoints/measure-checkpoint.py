@@ -19,6 +19,8 @@ class Measurement:
             instruments: Name given to instrument. Can be an array of names.
             
             values: Value to ramp corresponding instrument to. Can also be an array of values that match length of instruments"""
+        if self._plottingManager.currentlyRunning:
+            raise Exception("Sweep currently in progress. Please wait for sweeps to finish before ramping instruments.")
         values = np.array([values]).flatten()
                 
         #Convert instrument names into their respective instrument objects
@@ -198,6 +200,9 @@ class Measurement:
             
             name: New name of the instrument
         """
+        if self._plottingManager.currentlyRunning:
+            raise Exception("Sweep currently in progress. Please wait for sweeps to finish before renaming instruments.")
+        
         if type(name) != str:
             raise Exception("Please use a string for channel name")
         
