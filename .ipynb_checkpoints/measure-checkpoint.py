@@ -3,6 +3,7 @@ from plotting import PlottingOverview
 import ipywidgets as widgets
 import param
 import holoviews as hv
+import pickle
 
 class Measurement:
     
@@ -12,6 +13,7 @@ class Measurement:
         self.instrumentList = {}
     
     def addInstrument(self, instrument):
+        """Adds an instrument object to the experiment and ensures no overlap in name"""
         if instrument.name in self._InstrumentNamesList:
             raise Exception('Instrument name %s already exists as another Instrument or Channel name' % (instrument.name,))
             
@@ -27,6 +29,7 @@ class Measurement:
         return
     
     def ramp(self, instruments, values):
+        """Ramps an instrument (given by name) to a corresponding value (set by instrument driver). Input can be list of instruments and list of values"""
         values = np.array([values]).flatten()
                 
         #Convert instrument names into their respective instrument objects
@@ -38,6 +41,7 @@ class Measurement:
         return
         
     def sweep(self, sweepInst, start, end, steps, measurement):
+        """1D Sweep. Input is instrument name, start and end points, number of steps, and list of measuring instrument names"""
         sweepInst = self._getInstrument(sweepInst)
         measInsts = self._convertInstruments(measurement)
         
@@ -51,6 +55,7 @@ class Measurement:
         
     
     def sweep2D(self, sweepInst1, start1, end1, steps1, sweepInst2, start2, end2, steps2, measurement):
+        """2D Sweep. Similar input to 1D sweep, except with second instrument"""
         sweepInst1 = self._getInstrument(sweepInst1)
         sweepInst2 = self._getInstrument(sweepInst2)
         
@@ -66,20 +71,29 @@ class Measurement:
         return self._plottingManager._sweep(inst1 = sweepInst1, inst2= sweepInst2, measInst = measInsts, points = points, currState = self.currentState)
         
     def getPlot(self):
+        """Returns plot of last finished sweep"""
         return self._plottingManager._getPlot()
         
     
     def getPlotRunning(self, wait_time =10):
-        #Used to get plot of currently running measurement
+        """Returns plot of currently running sweep"""
         return self._plottingManager._getPlotRunning()
     
     def abortSweep(self):
+        """Aborts current sweep"""
         return self._plottingManager.abort_sweep()
     
     def abortAll(self):
+        """Aborts current and all queued sweeps"""
         return self._plottingManager.abort_all()
     
+    @property
+    def sweepQueue(self):
+        """Prints each sweep in queue and corresponding ID"""
+        return self._plottingManager.current_queue
+    
     def abortSweepID(self, id):
+        """Aborts sweep with given ID (see sweepQueue)"""
         return self._plottingManager.abortSweepID(id)
     
     
@@ -103,6 +117,7 @@ class Measurement:
       
     @property
     def InstrumentNames(self):
+        """Returns dictionary of all the instrument names"""
         names_dict = {}
         for name in self.instrumentList:
             instrument = self.instrumentList[name]
@@ -161,6 +176,7 @@ class Measurement:
         
     @property
     def currentState(self):
+        """Returns detailed dictionary containing all the current state information about each instrument (relies on QCoDeS snapshot feature)"""
         currState = {}
         for instrument in self.instrumentList:
             currState[instrument] = self.instrumentList[instrument].snapshot()
@@ -168,6 +184,7 @@ class Measurement:
     
     @property
     def readableCurrentState(self):
+        """Simplified version of current state that prints easily readable state information"""
         currState = {}
         for instrument in self.instrumentList:
             self.instrumentList[instrument].print_readable_snapshot()
@@ -176,7 +193,7 @@ class Measurement:
     
     
 def cut(image):
-    #Cut with slider instead of clicking on point. This fixes the problem of limited step size of .01 when using redim method. Instead using ipython widget which controls a created stream object, which can be passed into the dynamic map.
+    """Interactive line cuts of 2D Images"""
     
     class xy(hv.streams.Stream):
         x = param.Number(default=0.0,  doc='An X position.')
@@ -186,10 +203,7 @@ def cut(image):
     y_axis = np.unique(image.dimension_values(1))
     xw=widgets.SelectionSlider(options=[("%g"%i,i) for i in x_axis])
     yw=widgets.SelectionSlider(options=[("%g"%i,i) for i in y_axis])
-    #display(xw)
-    #display(yw)
     xyst = xy(x=x_axis[0], y=y_axis[0])
-    #dmap = hv.DynamicMap(lambda x, y: hv.Curve(([x,2*x], [2.0*y,3*y])), streams=[xyst])
     def marker(x,y):
         x_dim = {image.kdims[0].label: x}
         y_dim = {image.kdims[1].label: y}
@@ -201,7 +215,6 @@ def cut(image):
     def plot(x,y):
         xyst.event(x=x, y=y)
         
-
     hv.ipython.display(dmap)
     return widgets.interact(plot, x=widgets.SelectionSlider(options=[("%g"%i,i) for i in x_axis], continuous_update=False), y=widgets.SelectionSlider(options=[("%g"%i,i) for i in y_axis]))
 

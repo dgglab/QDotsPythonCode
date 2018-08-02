@@ -17,15 +17,17 @@ class savedData:
     
     @property
     def data(self):
-        #Returns data as panda dataframe
+        """Returns data as pandas dataframe"""
         return self.plot.dframe()
     
     @property
     def state(self):
+        """Returns state of all instruments at time of measurement"""
         return self._metadata
     
     @property
-    def prettyState(self):
+    def readableState(self):
+        """Simplifier state of all instruments"""
         for inst in self._metadata:
             snapshot = self._metadata[inst]
             if type(snapshot) == dict:
@@ -38,6 +40,7 @@ class savedData:
     
     @property
     def plot(self):
+        """Displays the plot associated with the given measurement"""
         if type(self._plot) == hv.Image:
             return self._plot.opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
         return self._plot

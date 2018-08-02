@@ -11,20 +11,39 @@ import numpy as np
 
 class PlottingThread(threading.Thread):
    
-    def __init__(self, threadID, name, points, dataQueue, retrQueue, instrument1, measurementInstrument, currentState =None, instrument2 = None, lthread = None):
+    def __init__(self, threadID, points, dataQueue, retrQueue, instrument1, measurementInstrument, currentState =None, instrument2 = None, lthread = None):
+        
+        #General Python threading initialization
         threading.Thread.__init__(self)
+        
         self.threadID = threadID
-        self.name = name
+        
+        #Dictionary of points to sweep to and of measured values
         self.point_dict = points
-        self.qu = dataQueue
+        
+        
+        #Flags to indicate aborting sweep, or returning the in-progress data
         self.stopflag = False
         self.get_plot = False
+        
+        #Reference to previously queued thread, such that sweep only starts when previous thread is done
         self.last_thread = lthread
+        
+        #Default is 1D sweep, but measure function will change this to 2D based off existence of second sweep instrument
+        self.sweep2D = False
+        
+        #Instruments to be swept and measured
         self.inst1 = instrument1
         self.inst2 = instrument2
         self.measInst = measurementInstrument
+        
+        #Queue that initial DynamicMap is passed through
+        self.qu = dataQueue
+        
+        #Queue for data to actually be passed through
         self.retrieval_queue = retrQueue
-        self.sweep2D = False
+        
+        #Metadata of system state when measurement starts
         self.currentState = currentState
     
     @property
@@ -39,38 +58,13 @@ class PlottingThread(threading.Thread):
     
 
     def savegen(self, result):
+        """Creates savedData object of measurement data and metadata"""
         name = time.strftime('%b-%d-%Y_%H-%M-%S', time.localtime())
         return saveClass.savedData(result, self.currentState, name, self._sweepDescription)
     
-    def save2D(self,result, channel1, start1, stop1, channel2, start2,stop2):
-        """Use result and sweep extents to save into the savedData class"""
-        curr_state = self.qd._convertDF()
-        
-        
-        ch1 = self.qd._parseChannel(channel1)[0]
-        ch2 = self.qd._parseChannel(channel2)[0]
-
-        #This is just pandas syntax to index a particular location (uses name of row, column) I believe can also use numbers, but if order of rows ever change, the name indexing won't change
-        curr_state.loc['Channel %s' % (ch1,), 'Voltage'] = '%s to %s' % (start1, stop1) 
-        curr_state.loc['Channel %s' % (ch2,), 'Voltage'] = '%s to %s' % (start2, stop2)
-        
-        t = time.localtime()
-        name = time.strftime('%b-%d-%Y_%H-%M-%S', t)
-        return saveClass.savedData(result, curr_state, name, self._sweepDescription)
-
-    def save1D(self,result, channel1, start1, stop1):
-        curr_state =self.qd._convertDF()
-        ch1 = self.qd._parseChannel(channel1)[0]
-
-        #b.loc['Channel %s' % (ch1,), 'Channel Name'] = 'Small Dot Gate'
-        curr_state.loc['Channel %s' % (ch1,), 'Voltage'] = '%s to %s' % (start1, stop1) 
-        t = time.localtime()
-        name = time.strftime('%b-%d-%Y_%H:%M:%S', t)
-
-        return saveClass.savedData(result, curr_state, name, self._sweepDescription)
     
     def save(self, savedData):
-        """Input is the savedData object that is returned from a sweep."""
+        """Input is the savedData object that is returned from a sweep. This saves the object in a pickled format as well as saves a thumbnail picture of plot"""
         save_name = savedData.name
         with open('%s.p' % (save_name,), 'wb') as file:
             pickle.dump(savedData, file)
@@ -80,17 +74,19 @@ class PlottingThread(threading.Thread):
     
     def measure(self):
         with warnings.catch_warnings():
+            #This ignores error when plot created with all-nan data. Not sure if there's a way around this, initializing with nan allows for the full range to be displayed initially
             warnings.filterwarnings("ignore", message="All-NaN slice encountered")
             warnings.filterwarnings("ignore", message = "All-NaN axis encountered")
             
             x_data = self.point_dict[self.inst1.name]
             if self.inst2:
+                #With existence of second instrument, must be a 2D sweep
                 self.sweep2D = True
                 y_data = self.point_dict[self.inst2.name]
             
             
             
-            #This defines how to update the Holoviews DynamicMap. Essentially the DynamicMap works through streams where some function can stream data into the plot. Since here we are just updating the data displayed, this function just returns a plot of the current data.
+            #This defines how to update the Holoviews DynamicMap. Essentially the DynamicMap works through streams where some function can stream data into the plot. Since here we are just updating the data displayed, this function just returns a plot of the current data. Also this is ugly, but not sure how to make this cleaner.
             def update_fn():
                 if self.sweep2D:
                     dispsq = hv.Image((x_data, y_data, self.point_dict[self.measInst[0].name]), kdims = [self.inst1.name, self.inst2.name], vdims = self.measInst[0].name).opts(norm=dict(framewise=True), plot=dict(colorbar=True), style=dict(cmap='jet'))
@@ -104,21 +100,29 @@ class PlottingThread(threading.Thread):
                 return dispsq
             dmap = hv.DynamicMap(update_fn, streams=[hv.streams.Stream.define("Dummy")()])
             
-            #This particular sleep may not be needed, but in genearl when using background threads without blocking in main thread, may not get expected behavior when running functions in main thread.
+            #This particular sleep may not be needed, but in general when using background threads without blocking in main thread, may not get expected behavior when running functions in main thread.
             time.sleep(.1)
+            
+            #Send DynamicMap to main thread to be displayed
             self.qu.put(dmap)
+            #This sleep helps fix some issues where main thread plot wouldn't show updates
             time.sleep(1)
+            
             #Block thread until previous thread (ie measurement finished)
             if self.last_thread:
-                #print(self.last_thread.threadID)
+                
                 self.last_thread.join()
             
             
+            #Different blocks for 2D vs 1D sweep, but intuitively seems unnecessary. Also makes it harder to modify, since have to modify both blocks. 
             if self.sweep2D:
                 for i in range(len(x_data)):
+                    #Ramp x axis instrument
                     self.inst1.ramp(x_data[i])
                     for j in range(len(y_data)):
                         if self.stopflag:
+                            
+                            #Only return plot if a point has already been measured
                             if not np.isnan(self.point_dict[self.measInst[0].name]).all():
                                 #create another copy of the image because dynamic map object now exists in main thread
                                 img = update_fn()
@@ -135,13 +139,17 @@ class PlottingThread(threading.Thread):
                             self.sendData(data)
                             self.get_plot = False
                         
+                        #Ramp y axis instrument
                         self.inst2.ramp(y_data[j])
+                        
+                        #This wait necessary for instantaneous ramping and measuring of instruments but for real instruments + lock in there will inherently be a wait time so probably not necessary there?
                         time.sleep(.1)
                         
                         for inst in self.measInst:
+                            #For each measurement instrument provided measure
                             self.point_dict[inst.name][j,i] = inst.measure()
                         
-                        #Update DynamicMap with updated data
+                        #Update DynamicMap with updated data (basically just calls update_fn again)
                         dmap.event()
                         
                 
@@ -162,7 +170,7 @@ class PlottingThread(threading.Thread):
                         #Used to get plot while its running
                         
                         img = update_fn()
-                        #data = self.save1D(img,1, min(x_data), max(x_data))
+                        
                         data = self.savegen(img)
                         self.sendData(data)
                         self.get_plot = False
@@ -183,6 +191,8 @@ class PlottingThread(threading.Thread):
         
     def sendData(self, data):
         """Put data into queue as only object, by first repeatedly pulling from queue until empty. Want queue to be empty because user may not always retrieve from queue after every sweep, and expected behavior is that retrieving from queue should get the latest sweep"""
+        
+        #Empty retrieval queue before putting data in (as long as main thread isn't putting stuff in simultaneously I think this should be fine since other threads are blocked until this thread finishes)
         while(1):
             try:
                 self.retrieval_queue.get_nowait()
@@ -191,31 +201,13 @@ class PlottingThread(threading.Thread):
         self.retrieval_queue.put(data)
     
     def run(self):
-        """This defines what the thread does when started. First starts the measurement function which returns the finished plot, puts it into the savedData object, and puts the object in the queue for the main thread to retrieve. Finally it saves the object into a pickle format to be read earlier."""
-        #print("Starting " + self.name)
-        
-        warnings.filterwarnings("ignore", message="All-NaN slice encountered\n drange = (np.nanmin(data), np.nanmax(data))")
+        """This defines what the thread does when started. First starts the measurement function, and when finished returns the finished plot, puts it into the savedData object, and puts the object in the queue for the main thread to retrieve. Finally it saves the object into a pickle format to be read earlier. The measure function itself sends the empty plot to the main thread which is then updated."""
+
         img = self.measure()
-        
-        
-        #x_data = self.point_dict[self.inst1.name]
-        #xmin = min(x_data)
-        #xmax = max(x_data)
-        #if self.inst2:
-        #    y_data = self.point_dict[self.inst2.name]
-        #    ymin = min(y_data)
-        #    ymax = max(y_data)
-        #if img:
-        #    if self.sweep2D:
-        #        data = self.save2D(img,1, xmin, xmax, 2, ymin, ymax)
-        #        
-        #    else:
-        #        data = self.save1D(img, 1, xmin, xmax)
         
         if img:
             data = self.savegen(img)
             
-            #Empty retrieval queue before putting data in (as long as main thread isn't putting stuff in simultaneously I think this should be fine since other threads are blocked until this thread finishes)
             self.sendData(data)
             #print(data.state)
             self.save(data)
@@ -227,33 +219,40 @@ class PlottingThread(threading.Thread):
     
 
 class PlottingOverview():
-    sweeping_flag = 0
-    
+    """This object manages the different plotting threads for every sweep"""
+      
+    #Define queues to send plot + data through
     q=queue.Queue()
     retrieval_queue = queue.Queue()
     
-    
+    #Initialize thread ID number
     thread_count = 0
+    
+    #This keeps track of the last queued sweep thread (not necessarily the currently running sweep)
     plot_thread = None
     
     def _sweep(self, inst1, measInst, points, currState, inst2 = None):
         #create queue that data is passed through
         self.q = queue.Queue()
         
+        #If last queued sweep thread is still running, then pass as the last thread for new sweep thread to reference (such that it waits for that thread to finish before running)
         
+        #Inputs of plot thread are the thread ID, dictionary of data, two queues, instruments to be swept, instruments to be measured, reference to previous thread (if applicable), and current state of all instruments 
         if self.plot_thread and self.plot_thread.isAlive():
-            self.plot_thread = PlottingThread(self.thread_count, "Thread %s" % (self.thread_count,), points, self.q, self.retrieval_queue, instrument1 = inst1, instrument2 = inst2, measurementInstrument = measInst, lthread = self.plot_thread, currentState = currState)
+            self.plot_thread = PlottingThread(self.thread_count, points, self.q, self.retrieval_queue, instrument1 = inst1, instrument2 = inst2, measurementInstrument = measInst, lthread = self.plot_thread, currentState = currState)
         else:
-            self.plot_thread = PlottingThread(self.thread_count, "Thread %s" % (self.thread_count,), points, self.q, self.retrieval_queue, instrument1 = inst1, instrument2 = inst2, measurementInstrument = measInst, currentState = currState)
+            self.plot_thread = PlottingThread(self.thread_count, points, self.q, self.retrieval_queue, instrument1 = inst1, instrument2 = inst2, measurementInstrument = measInst, currentState = currState)
         
+        #Increase thread count so next thread has different ID
         self.thread_count += 1
+        
+        #Starts thread by executing its run function
         self.plot_thread.start()
             
-        #time.sleep(.1)
+        #Retrieve image placed in queue by plotting thread
         #Using .get instead of no wait because .get blocks until it actually gets an object
         img = self.q.get()
         #self.plot_thread.join() #Temporary, used to see this plots full outputs
-        #time.sleep(.1)
         return img
 
 

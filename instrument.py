@@ -1,27 +1,25 @@
-from pymeasure.instruments import Mock
+from qcodes.tests.instrument_mocks import DummyInstrument
 import numpy as np
 
-class InstrumentWrapper:
-    x  = 0
-    
-    
-class MockWrapper(Mock):
+class MockWrapper(DummyInstrument):
     #_defName = 'mock'
     
-    def __init__(self, name = 'mock'):
-        super().__init__()
-        self._name = name
+    def __init__(self, name = 'mock', gates =['ch1']):
+        super().__init__(name, gates)
+        #self._name = name
         self._multiChannel = False
-        self.output_voltage  = 0
+        self.gates = gates
         
     def ramp(self, volt):
-        self.output_voltage = volt
+        self.set(self.gates[0], volt)
         
         
-class MockMeasure:
-    def __init__(self, name = 'measure'):
-        self._name = name
+class MockMeasure(DummyInstrument):
+    def __init__(self, name = 'measure', gates=['voltage']):
+        super().__init__(name, gates)
+        #self._name = name
         self._multiChannel = False
+        self.gates = gates
     
     def measure(self):
-        return np.random.randn(1)[0]
+        return np.random.randn(1)[0]+self.get(self.gates[0])
