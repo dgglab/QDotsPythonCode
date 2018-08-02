@@ -5,9 +5,12 @@ import os.path
 from IPython.display import Image, HTML 
 
 def listData():
-    """Returns a table of all the saved data files in a table with description, date, and thumbnail. This is HTML rendered in order to display .png pictures"""
+    """Returns a table of all the saved data files in a table with description, 
+	date, and thumbnail. This is HTML rendered in order to display .png
+	pictures"""
     
-    #Prevent truncation of long strings. Also necessary for images which have long file names, especially including HTML formatting
+    #Prevent truncation of long strings. Also necessary for images which have 
+	#long file names, especially including HTML formatting
     pd.set_option('display.max_colwidth', -1)
         
     data_df = _dataTable()
@@ -17,7 +20,8 @@ def listData():
 
 
 def _load(filename):
-    """Input is the pickled file that was automatically created from measurement or use of save function. Returns savedData object"""
+    """Input is the pickled file that was automatically created from measurement
+	or use of save function. Returns savedData object"""
     with open(filename, 'rb') as file:
         savedData = pickle.load(file)
         return savedData
@@ -45,7 +49,8 @@ def query(comment):
     """Returns table of all data that contains the input comment
     
     Args:
-        comment: Comment to search for. Looks for comments that just contain input comment ie 'o' will return data with the comment of 'good'
+        comment: Comment to search for. Looks for comments that just contain
+		input comment ie 'o' will return data with the comment of 'good'
     """
     pd.set_option('display.max_colwidth', -1)
     
@@ -55,7 +60,8 @@ def query(comment):
     return HTML(data_df_queried.to_html(escape=False))
 
 def _dataTable():
-    """Returns Pandas Dataframe that is used to display table in listData or query"""
+    """Returns Pandas Dataframe that is used to display table in listData or
+	query"""
     
     #Get all files with .p extension
     datafiles = glob.glob('*.p')
