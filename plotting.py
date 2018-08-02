@@ -18,33 +18,33 @@ class PlottingThread(threading.Thread):
         
         Args:
             threadID: Unique thread ID given to each thread. Allows for ability
-				to abort a specific thread by ID.
+                to abort a specific thread by ID.
             
             points: Dictionary of points to sweep to and also contains an np.nan
-				initialized array of measurement data. Measurement data array shape should be length(instrument2) x length(instrument1) Format is roughly {instrumentName: [points to sweep], measurementInstName: [[np.nan,...,np.nan],...]}
+                initialized array of measurement data. Measurement data array shape should be length(instrument2) x length(instrument1) Format is roughly {instrumentName: [points to sweep], measurementInstName: [[np.nan,...,np.nan],...]}
             
             dataQueue: Python Queue object that initial Holoviews DynamicMap is
-				passed through in order to display updating plot in main thread.
+                passed through in order to display updating plot in main thread.
             
             retrQueue: Python Queue object that savedData object is passed
-				through when measurement complete or when called for by main thread.
+                through when measurement complete or when called for by main thread.
             
             instrument1: The instrument to be swept on the x-axis
-				(slow axis for 2D sweep). This should be the instrument object
-				itself.
+                (slow axis for 2D sweep). This should be the instrument object
+                itself.
             
             measurementInstrument: The instrument to be measured at each point.
-				This can be a list of instruments if multiple parameters are being measured.
+                This can be a list of instruments if multiple parameters are being measured.
             
             currentState: Metadata of full system state. This is usually
-				obtained from the Measurement object (in measure.py) currentState method
+                obtained from the Measurement object (in measure.py) currentState method
             
             instrument2: For 2D sweeps, this is the instrument on the y-axis
-				(fast axis). This should be the instrument object itself.
+                (fast axis). This should be the instrument object itself.
             
             lthread: Reference to the thread initialized previous to this one.
-				This is used to ensure that the sweep only starts when the
-				previous thread is finished.
+                This is used to ensure that the sweep only starts when the
+                previous thread is finished.
             
         """
         #General Python threading initialization
@@ -89,7 +89,7 @@ class PlottingThread(threading.Thread):
         
         Args:
             result: The plot to be saved. Typically is a Holoviews Curve
-				(for 1D sweep) or Image (for 2D sweep), but does not have to be
+                (for 1D sweep) or Image (for 2D sweep), but does not have to be
 		"""
         name = time.strftime('%b-%d-%Y_%H-%M-%S', time.localtime())
         return saveClass.savedData(result, self.currentState, name, self._sweepDescription)
@@ -131,31 +131,31 @@ class PlottingThread(threading.Thread):
             def update_fn():
                 if self.sweep2D:
                     dispsq = hv.Image((x_data, y_data,
-										self.point_dict[self.measInst[0].name]),
-										kdims=[self.inst1.name, self.inst2.name],
-										vdims=self.measInst[0].name).opts(norm=dict(framewise=True),
-																		plot=dict(colorbar=True),
-																		style=dict(cmap='jet'))
+                                        self.point_dict[self.measInst[0].name]),
+                                        kdims=[self.inst1.name, self.inst2.name],
+                                        vdims=self.measInst[0].name).opts(norm=dict(framewise=True),
+                                                                        plot=dict(colorbar=True),
+                                                                        style=dict(cmap='jet'))
                     for i in range(1,len(self.measInst)):
                         dispsq += hv.Image((x_data, y_data,
-										self.point_dict[self.measInst[i].name]),
-										kdims=[self.inst1.name, self.inst2.name],
-										vdims=self.measInst[i].name).opts(norm=dict(framewise=True),
-																		plot=dict(colorbar=True),
-																		style=dict(cmap='jet'))
+                                        self.point_dict[self.measInst[i].name]),
+                                        kdims=[self.inst1.name, self.inst2.name],
+                                        vdims=self.measInst[i].name).opts(norm=dict(framewise=True),
+                                                                        plot=dict(colorbar=True),
+                                                                        style=dict(cmap='jet'))
                     
                 else:
                     dispsq = hv.Curve((x_data,
-									self.point_dict[self.measInst[0].name]),
-									kdims=self.inst1.name,
-									vdims=self.measInst[0].name).options(framewise=True,
-																		color=hv.Cycle('Colorblind').values[0])
+                                    self.point_dict[self.measInst[0].name]),
+                                    kdims=self.inst1.name,
+                                    vdims=self.measInst[0].name).options(framewise=True,
+                                    color=hv.Cycle('Colorblind').values[0])
                     for i in range(1, len(self.measInst)):
                         dispsq += hv.Curve((x_data,
-											self.point_dict[self.measInst[i].name]), 
-											kdims=self.inst1.name,
-											vdims=self.measInst[i].name).options(framewise=True,
-																				color=hv.Cycle('Colorblind').values[i])
+                                            self.point_dict[self.measInst[i].name]), 
+                                            kdims=self.inst1.name,
+                                            vdims=self.measInst[i].name).options(framewise=True,
+                                                                                color=hv.Cycle('Colorblind').values[i])
                 return dispsq
             dmap = hv.DynamicMap(update_fn, streams=[hv.streams.Stream.define("Dummy")()])
             
@@ -338,13 +338,13 @@ class PlottingOverview():
   
         if self.plot_thread and self.plot_thread.isAlive():
             self.plot_thread = PlottingThread(self.thread_count, points, self.q,
-											self.retrieval_queue, inst1,
-											measInst, currState, inst2,
-											lthread = self.plot_thread)
+                                            self.retrieval_queue, inst1,
+                                            measInst, currState, inst2,
+                                            lthread = self.plot_thread)
         else:
             self.plot_thread = PlottingThread(self.thread_count, points, self.q,
-											self.retrieval_queue, inst1,
-											measInst, currState, inst2)
+                                            self.retrieval_queue, inst1,
+                                            measInst, currState, inst2)
         
         #Increase thread count so next thread has different ID
         self.thread_count += 1

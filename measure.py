@@ -67,38 +67,38 @@ class Measurement:
             points[inst.name] = np.full(len(x_data), np.nan)
             
         return self._plottingManager._sweep(sweepInst, measInsts, points,
-											self.currentState)
+                                            self.currentState)
         
     
     def sweep2D(self, sweepInst1, start1, end1, steps1, sweepInst2, start2,
-				end2, steps2, measureParams):
+                end2, steps2, measureParams):
         """2D Sweep. Will display plot inline, but if
 		assigned (ie result = sweep(..)) the return value should also be the
 		updating plot.
         
         Args:
             sweepInst1: Name of first instrument to be swept. This will be
-				slow axis.
+                slow axis.
             
             start1: Initial value to sweep from for first instrument
             
             end1: Final value to sweep to for first instrument.
             
             steps1: Number of steps between start and end value for first
-				instrument. One step added (see 'sweep' docstring)
+                instrument. One step added (see 'sweep' docstring)
             
             sweepInst2: Name of second instrument to be swept. This will be
-				fast axis.
+                fast axis.
             
             start2: Initial value to sweep from for second instrument
             
             end2: Final value to sweep to for second instrument.
             
             steps2: Number of steps between start and end value for second
-				instrument. One step added (see 'sweep' docstring)
+                instrument. One step added (see 'sweep' docstring)
             
             measureParams: List of names of measurement instruments to be
-				measured at each point.
+                measured at each point.
         """
         sweepInst1 = self._getInstrument(sweepInst1)
         sweepInst2 = self._getInstrument(sweepInst2)
@@ -112,7 +112,7 @@ class Measurement:
             points[inst.name] = np.full((len(y_data), len(x_data)), np.nan)
             
         return self._plottingManager._sweep(sweepInst1, measInsts, points,
-											self.currentState, sweepInst2)
+                                            self.currentState, sweepInst2)
         
     def getPlot(self):
         """Returns savedData object created by last finished sweep"""
@@ -123,8 +123,8 @@ class Measurement:
         """Returns savedData object of currently running sweep
         
         Args:
-            wait_time: (default=10) This is how long (in seconds) function will
-				wait until currently running thread places the plot in the queue. This argument should only be relevant if at a given point the system waits longer than 10 seconds to measure.
+            wait_time: (default=10) This is how long (in seconds) function will 
+                wait until currently running thread places the plot in the queue. This argument should only be relevant if at a given point the system waits longer than 10 seconds to measure.
         """
         return self._plottingManager._getPlotRunning(wait_time)
     
@@ -342,9 +342,9 @@ def save(savedData, name = False):
         savedData: The data to be saved. This should be a savedData object.
         
         name: (Optional) Name to save the file as. The default behavior is to
-		use the name provided by the savedData object, which is the data and
-		time the object was created. This means that it overwrites the file that
-		was autosaved when a sweep was run.
+            use the name provided by the savedData object, which is the data and
+            time the object was created. This means that it overwrites the file that
+            was autosaved when a sweep was run.
     """
     if name:
         save_name = name
