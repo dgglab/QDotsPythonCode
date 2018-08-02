@@ -1,2 +1,5 @@
 *.png
 *.p
+__pycache__/
+*.py[cod]
+experiments.db
