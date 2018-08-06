@@ -197,11 +197,8 @@ class PlottingThread(threading.Thread):
                             return
                         if self.get_plot:
                             #Used to get plot while its running
-                            
                             img = update_fn()
-                            
                             data = self.savegen(img)
-                            #self.qu.put(img)
                             self.sendData(data)
                             self.get_plot = False
                         
@@ -229,17 +226,14 @@ class PlottingThread(threading.Thread):
                     self.inst1.ramp(x_data[i])
                     if self.stopflag:
                         if not np.isnan(self.point_dict[self.measInst[0].name]).all():
-                                #create another copy of the image because
-                                #dynamic map object now exists in main thread
-                            
+                            #create another copy of the image because
+                            #dynamic map object now exists in main thread
                             img = update_fn()
                             return img
                         return
                     if self.get_plot:
                         #Used to get plot while its running
-                        
                         img = update_fn()
-                        
                         data = self.savegen(img)
                         self.sendData(data)
                         self.get_plot = False
@@ -247,8 +241,6 @@ class PlottingThread(threading.Thread):
                     
                     for inst in self.measInst:
                         self.point_dict[inst.name][i] = inst.measure()
-                    #measurementData[i] = self.measInst.measure()
-                    
                     dmap.event()
 
                 img = update_fn()
@@ -279,16 +271,12 @@ class PlottingThread(threading.Thread):
         format to be read earlier. The measure function itself sends the empty
         plot to the main thread which is then updated.
         """
-
         img = self.measure()
-        
         if img:
             data = self.savegen(img)
-            
             self.sendData(data)
             #print(data.state)
             self.save(data)
-        #print ("Exiting " + self.name)
         return img
     
     def stop(self):
@@ -300,7 +288,6 @@ class PlottingOverview():
     This is also used by Measurement object to access plotting threads in order
 	to retrieve data or abort threads
 	"""
-      
     #Define queues to send plot + data through
     q=queue.Queue()
     retrieval_queue = queue.Queue()
@@ -329,7 +316,7 @@ class PlottingOverview():
             
             inst2: Instrument to be swept on y-axis (fast axis) for a 2D sweep
         """
-        #create queue that data is passed through
+        #Create new queue, since old one might still have data that was never retrieved
         self.q = queue.Queue()
         
         #If last queued sweep thread is still running, then pass as the last
@@ -360,6 +347,7 @@ class PlottingOverview():
 
 
     def _getPlot(self):
+        """Returns savedData object from last completed sweep."""
         try:
             return self.retrieval_queue.get_nowait()
         except queue.Empty:
@@ -389,11 +377,13 @@ class PlottingOverview():
         return curr_thread
     
     def abort_sweep(self):
+        """Aborts the currently running sweep"""
         curr_thread = self._runningThread
         curr_thread.stopflag = True
         return
     
     def abort_all(self):
+        """Aborts all queued sweeps"""
         curr_thread = self.plot_thread
         while curr_thread.last_thread and curr_thread.last_thread.isAlive():
             curr_thread.stopflag = True
@@ -413,24 +403,27 @@ class PlottingOverview():
             print(sweep)
         return
     
-    def abortSweepID(self, id):
+    def abortSweepID(self, ID):
         """Abort the given sweep ID, whether it is currently running or in the
 		queue
+        
+        Args:
+            ID: ID of sweep to be aborted
 		"""
         curr_thread = self.plot_thread
         prev_thread = None
         while curr_thread and curr_thread.isAlive():
-            if curr_thread.threadID == id:
+            if curr_thread.threadID == ID:
                 curr_thread.stopflag = True
                 if prev_thread:
                     prev_thread.last_thread = curr_thread.last_thread
                 else:
                     self.plot_thread = curr_thread.last_thread
-                print("Sweep ID %s aborted" % (id,))
+                print("Sweep ID %s aborted" % (ID,))
                 return
             prev_thread = curr_thread
             curr_thread = curr_thread.last_thread
-        print("No queued sweep with ID %s!" % (id,))
+        print("No queued sweep with ID %s!" % (ID,))
         return
     
     @property

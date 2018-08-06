@@ -5,14 +5,36 @@ from IPython.display import display
 from gui import GUI
 
 class qdacChannel:
-    voltage = 0
     def __init__(self, qdac, number, gui, name, _qdacwrapper):
+        """Class to represent individual channel of QDAC instrument. Created and 
+        managed by qdacWrapper.
+        
+        Args:
+            qdac: Actual QDAC object. This is defined in qdac.py which is
+                provided by QDevil directly.
+            
+            number: Integer indicating which channel this corresponds to (1-48).
+            
+            gui: Tkinter class defined in gui.py. This handles a table that is
+                displayed in a new window indicating the current status of each
+                channel (name and voltage).
+            
+            name: Name of the channel. Used both in gui display and in
+                specifiying which channel to use in Measure class
+                (in measure.py).
+            
+            _qdacwrapper:qdacWrapper object. This is required for each channel to
+                communicate back to the wrapper when voltages or names are changed. 
+                Might not be necessary with better implementation of Measure class
+                (in measure.py) which communicates directly to the individual
+                channels.
+        """
         self.qdacInst = qdac
         self.number = number
         self.guiDisplay = gui
         self._name = name
         self._qdacWrapper = _qdacwrapper
-        
+        self.voltage = 0
         loc = [number, 1]
         self.guiDisplay.update_name(loc, name)
         return
@@ -21,6 +43,11 @@ class qdacChannel:
         return 'QDAC Channel %s' % (self.number,)
     
     def ramp(self, voltage):
+        """Ramps this channel to the given voltage (V)
+        
+        Args:
+            voltage: Voltage (in Volts) to ramp to
+        """
         #Uncomment below when actually connected to qdac
         #self.qdacInst.setDCVoltage(channel = number, volts = voltage)
         self.voltage = voltage
@@ -28,13 +55,20 @@ class qdacChannel:
         
         #Location of gui is (channel #, 2) -- 2 is for column of voltages
         self.display_voltage([self.number, 2], voltage)
-        return
-
         
     def display_voltage(self, loc, value):
-        """Send voltage to Tkinter table to be displayed"""
+        """Sends a value to be displayed by associated Tkinter gui.
+        Don't actually need loc input since it is static for a given channel,
+        but keeping for now depending on how this changes.
+        
+        Args:
+            loc: location as a size 2 iterable that points to the associated
+                entry for this channel's voltage reading in the Tkinter gui
+                (see gui.py)
+                
+            value: Value to display. Should usually just be the voltage output
+        """
         self.guiDisplay.submit_to_tkinter(loc, np.round(value,6))
-        return
     
     @property
     def name(self):
@@ -48,22 +82,22 @@ class qdacChannel:
         self.guiDisplay.update_name(loc, name)
     
 class qdacWrapper:
+    """Wrapper class for QDevil QDAC. Manages each individual channel through a
+    dictionary. Important aspects are the _multiChannel property and snapshot
+    method. Most of the other methods are now redundant by the way the Measure
+    class works and I should remove."""
     location = '/dev/ttyUSB0'
     qdacInst= 1
     name = 'qdac'
     _multiChannel = True
     
-    guiDisplay = GUI()
-    guiDisplay.start()
     
     def __init__(self):
         self.channel_mapping = {'qdac%s' % (n,):qdacChannel(qdac = self.qdacInst, number = n, gui = self.guiDisplay, name= 'qdac%s' % (n,), _qdacwrapper = self) for n in range(1,49)}
-    #_defaultMapping = {'qdac%s' % (n,):qdacChannel(qdacInst, number) for n in range(1,49)}
-    #voltage_list = np.zeros(48)
+        guiDisplay = GUI()
+        guiDisplay.start()
+        voltage_dict = {n: 0 for n in range(1,49)}
         return
-        
-        
-    voltage_dict = {n: 0 for n in range(1,49)}
     
     def _nameGate(self, name, channel):
         if type(name) != str:
@@ -116,10 +150,6 @@ class qdacWrapper:
     def _nameExist(self, name):
         if type(name) != str:
             raise Exception("Input %s is not a string!" % (name,))
-        #if name in self.channel_mapping.keys():
-        #    return True
-        #else:
-        #    return False
         return (name in self.channel_mapping.keys())
     
     def _channelExist(self,channel):
