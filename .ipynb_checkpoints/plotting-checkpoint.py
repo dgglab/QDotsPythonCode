@@ -11,7 +11,7 @@ import numpy as np
 
 class PlottingThread(threading.Thread):
     def __init__(self, threadID, points, dataQueue, retrQueue, instrument1,
-                measurementInstrument, currentState =None, instrument2 = None,
+                measurementInstrument, MeasurementRef = None, instrument2 = None,
                 lthread = None):
         """Thread object that handles background sweeping and measuring of
 		instruments.
@@ -36,8 +36,8 @@ class PlottingThread(threading.Thread):
             measurementInstrument: The instrument to be measured at each point.
                 This can be a list of instruments if multiple parameters are being measured.
             
-            currentState: Metadata of full system state. This is usually
-                obtained from the Measurement object (in measure.py) currentState method
+            MeasurementRef: Measurement overview object (defined in measure.py). 
+                Used to obtain the metadata of full system state when sweep has finished. 
             
             instrument2: For 2D sweeps, this is the instrument on the y-axis
                 (fast axis). This should be the instrument object itself.
@@ -70,7 +70,7 @@ class PlottingThread(threading.Thread):
         self.qu = dataQueue
         self.retrieval_queue = retrQueue
         
-        self.currentState = currentState
+        self.MeasurementRef = MeasurementRef
     
     @property
     def _sweepDescription(self):
@@ -92,11 +92,12 @@ class PlottingThread(threading.Thread):
                 (for 1D sweep) or Image (for 2D sweep), but does not have to be
 		"""
         name = time.strftime('%b-%d-%Y_%H-%M-%S', time.localtime())
-        return saveClass.savedData(result, self.currentState, name, self._sweepDescription)
+        return saveClass.savedData(result, self.MeasurementRef.currentState, name, self._sweepDescription)
     
     def save(self, savedData):
         """Saves a savedData object as pickle file. Also saves a picture of the
-        plot to be used as a thumbnail.
+        plot to be used as a thumbnail. Typically the input is the output from
+        the savegen function.
         
         Args:
             savedData: savedData object containing data and metadata information
@@ -299,7 +300,7 @@ class PlottingOverview():
 	#currently running sweep)
     plot_thread = None
     
-    def _sweep(self, inst1, measInst, points, currState, inst2 = None):
+    def _sweep(self, inst1, measInst, points, MeasurementRef, inst2 = None):
         """Creates and starts PlottingThread with instruments to be swept.
         Returns the DynamicMap the thread puts into a queue, such that main
         thread can display.
@@ -312,7 +313,8 @@ class PlottingOverview():
             points: Dictionary of values to sweep to for each instrument as well
                 as array of measurement data
             
-            currState: Metadata of current state of all instruments in system
+            MeasurementRef: Reference to Measurement Overview object (defined in measure.py).
+                Used to extract metadata of current state of system when sweep has finished.
             
             inst2: Instrument to be swept on y-axis (fast axis) for a 2D sweep
         """
@@ -326,12 +328,12 @@ class PlottingOverview():
         if self.plot_thread and self.plot_thread.isAlive():
             self.plot_thread = PlottingThread(self.thread_count, points, self.q,
                                             self.retrieval_queue, inst1,
-                                            measInst, currState, inst2,
+                                            measInst, MeasurementRef, inst2,
                                             lthread = self.plot_thread)
         else:
             self.plot_thread = PlottingThread(self.thread_count, points, self.q,
                                             self.retrieval_queue, inst1,
-                                            measInst, currState, inst2)
+                                            measInst, MeasurementRef, inst2)
         
         #Increase thread count so next thread has different ID
         self.thread_count += 1

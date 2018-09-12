@@ -22,7 +22,8 @@ class Measurement:
             instruments: Name given to instrument. Can be an array of names.
             
             values: Value to ramp corresponding instrument to. Can also be an
-			array of values that match length of instruments"""
+			array of values that match length of instruments
+        """
         if self._plottingManager.currentlyRunning:
             raise Exception("Sweep currently in progress. Please wait for sweeps to finish before ramping instruments.")
         values = np.array([values]).flatten()
@@ -67,7 +68,7 @@ class Measurement:
             points[inst.name] = np.full(len(x_data), np.nan)
             
         return self._plottingManager._sweep(sweepInst, measInsts, points,
-                                            self.currentState)
+                                            self)
         
     
     def sweep2D(self, sweepInst1, start1, end1, steps1, sweepInst2, start2,
@@ -112,7 +113,7 @@ class Measurement:
             points[inst.name] = np.full((len(y_data), len(x_data)), np.nan)
             
         return self._plottingManager._sweep(sweepInst1, measInsts, points,
-                                            self.currentState, sweepInst2)
+                                            self, sweepInst2)
         
     def getPlot(self):
         """Returns savedData object created by last finished sweep"""
@@ -266,7 +267,8 @@ class Measurement:
     @property
     def currentState(self):
         """Returns detailed dictionary containing all the current state
-        information about each instrument (relies on QCoDeS snapshot feature)
+        information about each instrument
+        (relies on QCoDeS snapshot feature or user defined equivalent)
         """
         currState = {}
         for instrument in self.instrumentDict:
@@ -315,7 +317,7 @@ def cut(image):
         y_dim = {image.kdims[1].label: y}
         crosssection1 = image.sample(**x_dim).opts(norm=dict(framewise=True))
         crosssection1y = image.sample(**y_dim).opts(norm=dict(framewise=True))
-        return hv.Layout(image * hv.VLine(x) * hv.HLine(y) + crosssection1+crosssection1y).cols(2)
+        return hv.Layout(image * hv.VLine(x) * hv.HLine(y) + crosssection1+crosssection1y).cols(2).opts(norm=dict(axiwise=True))
     
     #Create DynamicMap of above Layout such that the x,y positions can be
 	#streamed and updated

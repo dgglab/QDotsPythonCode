@@ -6,19 +6,24 @@ import holoviews as hv
 import pickle
 
 class Measurement:
-    """Overview object that manages all instruments in experiment and handles measurements. All basic commands (such as ramping, sweeping, renaming of instruments) should be run through this object directly."""
+    """Overview object that manages all instruments in experiment and handles
+	measurements. All basic commands (such as ramping, sweeping, renaming of
+	instruments) should be run through this object directly."""
     
     def __init__(self):
         self.instrumentDict = {}
         self._plottingManager = PlottingOverview()
     
     def ramp(self, instruments, values):
-        """Ramps an instrument (given by name) to a corresponding value (set by instrument driver).
+        """Ramps an instrument (given by name) to a corresponding value
+        (set by instrument driver).
             
         Args:
             instruments: Name given to instrument. Can be an array of names.
             
-            values: Value to ramp corresponding instrument to. Can also be an array of values that match length of instruments"""
+            values: Value to ramp corresponding instrument to. Can also be an
+			array of values that match length of instruments
+        """
         if self._plottingManager.currentlyRunning:
             raise Exception("Sweep currently in progress. Please wait for sweeps to finish before ramping instruments.")
         values = np.array([values]).flatten()
@@ -33,7 +38,9 @@ class Measurement:
         return
         
     def sweep(self, sweepInst, start, end, steps, measureParams):
-        """1D Sweep. Will display plot inline, but if assigned (ie result = sweep(..)) the return value should also be the updating plot.
+        """1D Sweep. Will display plot inline, but if assigned
+        (ie result = sweep(..)) the return value should also be the
+        updating plot.
         
         Args:
             sweepInst: Name of instrument to be swept
@@ -42,10 +49,13 @@ class Measurement:
             
             end: Final value to sweep to
             
-            steps: Number of steps between start and end value. One additional step is automatically added for convenience, 
-                such as a sweep from 2 to 5 in 3 steps actually has 4 steps (2,3,4,5).
+            steps: Number of steps between start and end value.
+                One additional step is automatically added for convenience, 
+                such as a sweep from 2 to 5 in 3 steps actually has 4
+                steps (2,3,4,5).
                 
-            measureParams: List of names of measurement instruments to be measured at each point.
+            measureParams: List of names of measurement instruments to be
+                measured at each point.
         """
         
         sweepInst = self._getInstrument(sweepInst)
@@ -57,30 +67,39 @@ class Measurement:
         for inst in measInsts:
             points[inst.name] = np.full(len(x_data), np.nan)
             
-        return self._plottingManager._sweep(sweepInst, measInsts, points, self.currentState)
+        return self._plottingManager._sweep(sweepInst, measInsts, points,
+                                            self)
         
     
-    def sweep2D(self, sweepInst1, start1, end1, steps1, sweepInst2, start2, end2, steps2, measureParams):
-        """2D Sweep. Will display plot inline, but if assigned (ie result = sweep(..)) the return value should also be the updating plot.
+    def sweep2D(self, sweepInst1, start1, end1, steps1, sweepInst2, start2,
+                end2, steps2, measureParams):
+        """2D Sweep. Will display plot inline, but if
+        assigned (ie result = sweep(..)) the return value should also be the
+        updating plot.
         
         Args:
-            sweepInst1: Name of first instrument to be swept. This will be slow axis.
+            sweepInst1: Name of first instrument to be swept. This will be
+                slow axis.
             
             start1: Initial value to sweep from for first instrument
             
             end1: Final value to sweep to for first instrument.
             
-            steps1: Number of steps between start and end value for first instrument. One step added (see 'sweep' docstring)
+            steps1: Number of steps between start and end value for first
+                instrument. One step added (see 'sweep' docstring)
             
-            sweepInst2: Name of second instrument to be swept. This will be fast axis.
+            sweepInst2: Name of second instrument to be swept. This will be
+                fast axis.
             
             start2: Initial value to sweep from for second instrument
             
             end2: Final value to sweep to for second instrument.
             
-            steps2: Number of steps between start and end value for second instrument. One step added (see 'sweep' docstring)
+            steps2: Number of steps between start and end value for second
+                instrument. One step added (see 'sweep' docstring)
             
-            measureParams: List of names of measurement instruments to be measured at each point.
+            measureParams: List of names of measurement instruments to be
+                measured at each point.
         """
         sweepInst1 = self._getInstrument(sweepInst1)
         sweepInst2 = self._getInstrument(sweepInst2)
@@ -93,7 +112,8 @@ class Measurement:
         for inst in measInsts:
             points[inst.name] = np.full((len(y_data), len(x_data)), np.nan)
             
-        return self._plottingManager._sweep(sweepInst1, measInsts, points, self.currentState, sweepInst2)
+        return self._plottingManager._sweep(sweepInst1, measInsts, points,
+                                            self, sweepInst2)
         
     def getPlot(self):
         """Returns savedData object created by last finished sweep"""
@@ -104,7 +124,8 @@ class Measurement:
         """Returns savedData object of currently running sweep
         
         Args:
-            wait_time: (default=10) This is how long (in seconds) function will wait until currently running thread places the plot in the queue. This argument should only be relevant if at a given point the system waits longer than 10 seconds to measure.
+            wait_time: (default=10) This is how long (in seconds) function will 
+                wait until currently running thread places the plot in the queue. This argument should only be relevant if at a given point the system waits longer than 10 seconds to measure.
         """
         return self._plottingManager._getPlotRunning(wait_time)
     
@@ -151,7 +172,10 @@ class Measurement:
       
     @property
     def InstrumentNames(self):
-        """Returns dictionary of all the instrument names (including individual channels of multi-channeled instruments). The format is {name: instrument}"""
+        """Returns dictionary of all the instrument names (including individual
+        channels of multi-channeled instruments).
+        The format is {name: instrument}
+        """
         names_dict = {}
         for name in self.instrumentDict:
             instrument = self.instrumentDict[name]
@@ -163,7 +187,9 @@ class Measurement:
     
     @property
     def _InstrumentNamesList(self):
-        """Returns a flattened out list of all instrument names including individual channels"""
+        """Returns a flattened out list of all instrument names including
+        individual channels
+        """
         names = []
         for name in self.instrumentDict:
             names.append(name)
@@ -193,7 +219,8 @@ class Measurement:
         self.instrumentDict[instrument.name] = instrument
     
     def nameInstrument(self, currInstName, name):
-        """Rename an instrument. Will raise an error if the new name is already being used.
+        """Rename an instrument. Will raise an error if the new name is already
+        being used.
         
         Args:
             currInstName: The current name of the instrument to be renamed.
@@ -215,7 +242,8 @@ class Measurement:
             raise Exception('Name already taken by %s' % (self._getInstrument(name)))
         instrument = self._getInstrument(currInstName)
         
-        #Replace instrument name in instrumentDict (if this is a channel of an instrument, ie QDAC, then the instrument itself handles naming)
+        #Replace instrument name in instrumentDict (if this is a channel of an
+		#instrument, ie QDAC, then the instrument itself handles naming)
         try:
             self.instrumentDict[name] = self.instrumentDict.pop(currInstName)
         except KeyError:
@@ -224,18 +252,24 @@ class Measurement:
         instrument.name = name
     
     def _convertInstruments(self, channels):
-        """Convert list of names of instruments or channels into a list of the respective instrument objects. Returns this list of instrument objects"""
+        """Convert list of names of instruments or channels into a list of the
+        respective instrument objects. Returns this list of instrument objects
+        """
         input_type = type(channels)
         if input_type in {np.ndarray, list, tuple}:
             if len(channels) == 1:
                 return self._getInstrument(channels[0])
-            return np.append(self._getInstrument(channels[0]), self._convertInstruments(channels[1:]))
+            return np.append(self._getInstrument(channels[0]),
+							self._convertInstruments(channels[1:]))
         else:
             return np.array([self._getInstrument(channels)])
         
     @property
     def currentState(self):
-        """Returns detailed dictionary containing all the current state information about each instrument (relies on QCoDeS snapshot feature)"""
+        """Returns detailed dictionary containing all the current state
+        information about each instrument
+        (relies on QCoDeS snapshot feature or user defined equivalent)
+        """
         currState = {}
         for instrument in self.instrumentDict:
             currState[instrument] = self.instrumentDict[instrument].snapshot()
@@ -243,7 +277,9 @@ class Measurement:
     
     @property
     def readableCurrentState(self):
-        """Prints a simplified version of current state that prints easily readable state information"""
+        """Prints a simplified version of current state that prints easily
+        readable state information
+        """
         currState = {}
         for instrument in self.instrumentDict:
             self.instrumentDict[instrument].print_readable_snapshot()
@@ -273,25 +309,33 @@ def cut(image):
     
     xyst = xy(x=x_axis[0], y=y_axis[0])
     
-    #Define function that creates Holoviews Layout. This Layout contains the original 2D image, lines going through the x,y point specified, and the line cuts themselves
+    #Define function that creates Holoviews Layout. This Layout contains
+	#the original 2D image, lines going through the x,y point specified,
+	#and the line cuts themselves
     def marker(x,y):
         x_dim = {image.kdims[0].label: x}
         y_dim = {image.kdims[1].label: y}
         crosssection1 = image.sample(**x_dim).opts(norm=dict(framewise=True))
         crosssection1y = image.sample(**y_dim).opts(norm=dict(framewise=True))
-        return hv.Layout(image * hv.VLine(x) * hv.HLine(y) + crosssection1+crosssection1y).cols(2)
+        return hv.Layout(image * hv.VLine(x) * hv.HLine(y) + crosssection1+crosssection1y).cols(2).opts(norm=dict(axiwise=True))
     
-    #Create DynamicMap of above Layout such that the x,y positions can be streamed and updated
+    #Create DynamicMap of above Layout such that the x,y positions can be
+	#streamed and updated
     dmap = hv.DynamicMap(marker, streams=[xyst])
     
-    #Function that widget can call to update DynamicMap. When this Stream object updates the x,y position via the Slider widget and then the event method called, the DynamicMap recomputes marker based off this and thus updates the line cut.
+    #Function that widget can call to update DynamicMap. When this Stream object
+	#updates the x,y position via the Slider widget and then the event method
+	#called, the DynamicMap recomputes marker based off this and thus updates
+	#the line cut.
     def plot(x,y):
         xyst.event(x=x, y=y)
         
     hv.ipython.display(dmap)
     
     #Return statement is the syntax for interacting widgets (see ipywidget docs). 
-    return widgets.interact(plot, x=widgets.SelectionSlider(options=[("%g"%i,i) for i in x_axis], continuous_update=False), y=widgets.SelectionSlider(options=[("%g"%i,i) for i in y_axis]))
+    return widgets.interact(plot, x=widgets.SelectionSlider(options=[("%g"%i,i) for i in x_axis],
+							continuous_update=False),
+							y=widgets.SelectionSlider(options=[("%g"%i,i) for i in y_axis]))
 
 def save(savedData, name = False):
     """Saves data into pickle format in the current folder.
@@ -299,7 +343,10 @@ def save(savedData, name = False):
     Args:
         savedData: The data to be saved. This should be a savedData object.
         
-        name: (Optional) Name to save the file as. The default behavior is to use the name provided by the savedData object, which is the data and time the object was created. This means that it overwrites the file that was autosaved when a sweep was run.
+        name: (Optional) Name to save the file as. The default behavior is to
+            use the name provided by the savedData object, which is the data and
+            time the object was created. This means that it overwrites the file that
+            was autosaved when a sweep was run.
     """
     if name:
         save_name = name
