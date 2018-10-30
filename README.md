@@ -46,4 +46,4 @@ jupyter labextension install @jupyter-widgets/jupyterlab-manager
 ```
 
 ## Examples
-See Demo.ipynb for a demo of examples
+See [Demo.ipynb](https://github.com/dgglab/QDotsPythonCode/blob/master/Demo.ipynb) for a demo of examples
