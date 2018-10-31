@@ -46,4 +46,6 @@ jupyter labextension install @jupyter-widgets/jupyterlab-manager
 ```
 
 ## Examples
-See [Demo.ipynb](https://github.com/dgglab/QDotsPythonCode/blob/master/Demo.ipynb) for a demo of examples
+See [Demo.ipynb](https://github.com/dgglab/QDotsPythonCode/blob/master/Demo.ipynb) for a demo of examples.
+
+Note that the actual plots themselves and thumbnails that are saved will probably not display properly.
