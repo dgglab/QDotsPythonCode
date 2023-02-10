@@ -10,7 +10,7 @@ but it is not too difficult to write one.
 ## Installing
 Open conda terminal.
 
-Using the environment file provided (.yml) run 
+Using the environment file provided (.yml) run (02/10/23 note: these packages are likely somewhat outdated, and using newer versions may fix some compatability bugs that existed when I first set this up)
 ```
 conda env create -f gggmeas.yml
 ```
